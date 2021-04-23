@@ -636,7 +636,7 @@ function init_game() {
 		
 	};	
 	
-	objects.bcg.mousemove=function(e) {	
+	objects.bcg.pointermove=function(e) {	
 			
 		if (drag===1) {
 			touch_data.x1 = e.data.global.x/app.stage.scale.x;
