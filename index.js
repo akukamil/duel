@@ -1135,14 +1135,17 @@ var fp_menu= {
 		VK.api(
 			"users.get", {
 			access_token: '03af491803af491803af4918d103d800b3003af03af491863c040d61bee897bd2785a50',
-			fields: 'photo_50,has_photo,last_seen'
+			fields: 'photo_100,has_photo,last_seen'
 		},
 			function (data) {
 				
 			let first_name = data.response[0].first_name;
 			let last_name = data.response[0].first_name;
 			let pic_url = data.response[0].photo_100;
+			let ls=data.response[0].last_seen;
 						
+			objects.fp_name_text.text=first_name+" "+last_name;
+			objects.fp_last_seen_text.text=ls.time;
 			//загружаем аватар игрока
 			var loaderOptions = {loadType: PIXI.loaders.Resource.LOAD_TYPE.IMAGE};
 			var loader = new PIXI.Loader();
