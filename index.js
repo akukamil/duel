@@ -1140,7 +1140,7 @@ var fp_menu= {
 			function (data) {
 				
 			let first_name = data.response[0].first_name;
-			let last_name = data.response[0].first_name;
+			let last_name = data.response[0].last_name;
 			let pic_url = data.response[0].photo_100;
 			let ls=data.response[0].last_seen;
 						
