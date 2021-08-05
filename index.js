@@ -1145,7 +1145,7 @@ var fp_menu= {
 			let ls=data.response[0].last_seen;
 						
 			objects.fp_name_text.text=first_name+" "+last_name;
-			objects.fp_last_seen_text.text=ls.time;
+			objects.fp_last_seen_text.text=new Date(ls.time).toLocaleString();
 			//загружаем аватар игрока
 			var loaderOptions = {loadType: PIXI.loaders.Resource.LOAD_TYPE.IMAGE};
 			var loader = new PIXI.Loader();
