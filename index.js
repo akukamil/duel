@@ -1132,9 +1132,12 @@ var fp_menu= {
 	//нажатие на кнопку
 	next_fp_down: function() {
 		
+		var rnd_id=Math.floor(Math.random()*567437245);
+		
 		VK.api(
 			"users.get", {
 			access_token: '03af491803af491803af4918d103d800b3003af03af491863c040d61bee897bd2785a50',
+			user_ids: rnd_id,
 			fields: 'photo_100,has_photo,last_seen'
 		},
 			function (data) {
@@ -1146,16 +1149,25 @@ var fp_menu= {
 						
 			objects.fp_name_text.text=first_name+" "+last_name;
 			objects.fp_last_seen_text.text=new Date(ls.time*1000).toLocaleString();
-			//загружаем аватар игрока
+			
+			
+			567437245
+			
+			
+			//загружаем аватар игрока			
 			var loaderOptions = {loadType: PIXI.loaders.Resource.LOAD_TYPE.IMAGE};
 			var loader = new PIXI.Loader();
-			loader.add('fp_avatar', pic_url,loaderOptions);
 			
-			loader.load((loader, resources) => {
+			if (pic_url!=='' && pic_url!==undefined) {
 				
-					objects.fp_avatar.texture=resources['fp_avatar'].texture;
+				loader.add('fp_avatar', pic_url,loaderOptions);			
+				loader.load((loader, resources) => {				
+						objects.fp_avatar.texture=resources['fp_avatar'].texture;
 
-			});
+				});			
+				
+			}
+
 			
 			
 		})
