@@ -1,915 +1,2003 @@
-var M_WIDTH=800, M_HEIGHT=450;
-var app, game_res,  objects={}; 
-var my_data={},opp_data={};
-var g_process=()=>{};
+var M_WIDTH = 800, M_HEIGHT = 450;
+var app, game_res, gres, objects = {}, my_data = {}, opp_data = {};
+var g_process = () => {};
 
-var mouse_pos;
-var touch_data={x0:-999, y0:-999, x1:-999, y1:-999};
-var guide_line=new PIXI.Graphics();
-var guide_line2=new PIXI.Graphics();
-var drag=0; game_tick=0;
-var initiator="me";
+var any_dialog_active = 0, net_play = 0;
 
-var left_body_col=[[125,383],[115,380],[113,358],[103,346],[92,343],[96,333],[100,323],[100,312],[91,303]];
-var left_head_col=[[94,303],[96,294],[96,291],[92,287],[92,284],[78,284],[75,296]];
+var guide_line = new PIXI.Graphics();
+var guide_line2 = new PIXI.Graphics();
+var drag = 0, game_tick = 0, state = "";
+var skl_prepare, skl_throw, skl_lose;
+var charge_spd=0.005;
+var test_sprite;
 
-var right_body_col=[[678,253],[687,250],[690,227],[699,216],[711,212],[707,202],[703,193],[703,181],[714,172]];
-var right_head_col=[[708,174],[706,165],[706,162],[709,157],[709,154],[721,154],[725,162]];
-
-
-var particle_engine={
+class lb_player_card_class extends PIXI.Container{
 	
-	sx: 0, sy: 0, sprites: [], count: 0, dir: 1, start_time: -999,
-	
-	init: function() {
+	constructor(x,y,place) {
+		super();
+
+		this.bcg=new PIXI.Sprite(game_res.resources.lb_player_card_bcg.texture);
+		this.bcg.interactive=true;
+		this.bcg.pointerover=function(){this.tint=0x55ffff};
+		this.bcg.pointerout=function(){this.tint=0xffffff};
+				
 		
-		for (let i = 0; i < 50; i++) {		
+		this.place=new PIXI.BitmapText("1", {font: '25px Century Gothic'});
+		this.place.x=20;
+		this.place.y=20;
+		
+		this.avatar=new PIXI.Sprite();
+		this.avatar.x=40;
+		this.avatar.y=10;
+		this.avatar.width=this.avatar.height=48;
+		
+		
+		this.name=new PIXI.BitmapText('Игорь Николаев', {font: '25px Century Gothic'});
+		this.name.x=100;
+		this.name.y=20;
+		
+	
+		this.rating=new PIXI.BitmapText('1422', {font: '35px Century Gothic'});
+		this.rating.x=300;
+		this.rating.tint=0x00ffff;
+		this.rating.y=20;		
+		
+		this.addChild(this.bcg,this.place, this.avatar, this.name, this.rating);		
+	}
+	
+	
+}
 
-			const prtcl = new PIXI.Sprite(game_res.resources["blood_particle"].texture);
-			prtcl.visible=false;
-			prtcl.y_inc=Math.random()/50+0.01;
-			prtcl.x_spd=Math.random()*5+3;
-			prtcl.sx=prtcl.sy=prtcl.x_traveled=0;
-			prtcl.anchor.set(0.5,0.5);
-			this.sprites.push(prtcl);
-			app.stage.addChild(prtcl);
+var particle_engine = {
+
+	particles : class {
+		
+		constructor() {
+			
+			this.active=0;
+			this.sx= 0;
+			this.sy= 0;
+			this.start_time= -999;
+			this.dir = 0;
+			this.coll_obj=0;
+			this.coll_obj_id=0;
+			this.target_name="";
+			
+			this.p=[];
+			for (let i = 0; i < 30; i++) {
+				
+				const prtcl = new PIXI.Sprite(game_res.resources["blood_particle"].texture);
+				prtcl.visible = false;
+				prtcl.y_inc = Math.random() / 50 + 0.01;
+				prtcl.x_spd = Math.random() * 5 + 3;
+				prtcl.sx = prtcl.sy = prtcl.x_traveled = 0;
+				prtcl.i=0;
+				prtcl.anchor.set(0.5, 0.5);
+				prtcl.alpha=0.7;
+				this.p.push(prtcl);
+				app.stage.addChild(prtcl);
+			}			
+			
 		};
 		
-	},
-	
-	start: function(x, y, dir) {
-				
-		this.sx=x;
-		this.sy=y;
-		this.dir=dir;		
-
-		this.start_time=game_tick;
-	},
-	
-	add_particle: function() {
+		activate = function (int_x,int_y,dir,P, coll_obj, coll_obj_id) {
+			
+			this.coll_obj=coll_obj;
+			this.coll_obj_id=coll_obj_id;
+			
+			//вычисляем расстояние от начала линии коллизии до точки пересечения
+			let dx=int_x-this.coll_obj[this.coll_obj_id][0];
+			let dy=int_y-this.coll_obj[this.coll_obj_id][1];
+			this.disp=Math.sqrt(dx*dx+dy*dy);
+			this.dir = dir;
+			this.target_name=this.dir > 0 ? "player" : "enemy";
+			this.P=P;
+			this.active=1;
+			this.start_time = game_tick;
+			
 		
-		for (let i=0;i<this.sprites.length;i++) {
-			let t=this.sprites[i];
-			if (t.visible===false) {				
-				t.x=t.sx=this.sx;
-				t.y=t.sy=this.sy;				
-				t.scale.x=t.scale.y=0.1;				
-				t.x_traveled=0;				
-				t.y_inc=Math.random()/50+0.01;				
-				t.visible=true;				
-				t.alpha=1;					
-				return;
+		};
+		
+		add_particle = function () {
+			
+			for (let i = 0; i < this.p.length; i++) {
+				let prtcl = this.p[i];
+				if (prtcl.visible === false) {
+					
+					let dx=this.coll_obj[this.coll_obj_id+1][0]-this.coll_obj[this.coll_obj_id][0];
+					let dy=this.coll_obj[this.coll_obj_id+1][1]-this.coll_obj[this.coll_obj_id][1];
+					let d=Math.sqrt(dx*dx+dy*dy);
+					dx=dx/d;
+					dy=dy/d;			
+					
+					prtcl.x = prtcl.sx = this.coll_obj[this.coll_obj_id][0]+dx*this.disp;
+					prtcl.y = prtcl.sy = this.coll_obj[this.coll_obj_id][1]+dy*this.disp;
+					prtcl.scale.x = prtcl.scale.y = 0.6;
+					prtcl.x_traveled = 0;
+					prtcl.i=0;
+					prtcl.x_spd=Math.random() * 5 + 3+this.P*0.05;
+					prtcl.y_inc = Math.random() / 50 + 0.01;
+					prtcl.visible = true;
+					prtcl.rotation=Math.random()*6.28;
+					prtcl.alpha = 0.7;
+					this.active=1;
+					return;
+				}
+			}
+			
+		};
+		
+		process = function () {
+						
+			if (this.active===0)
+				return;			
+			
+			//постоянно добавляем частицы
+			if (game_tick < this.start_time + this.P*0.01)
+				this.add_particle();
+			
+			//обрабатываем все частицы
+			this.active=0;
+			this.p.forEach(item => {
+
+				if (item.visible === true) {
+
+					this.active=1;
+	
+					item.x_traveled += item.x_spd * this.dir;
+					item.x = item.sx + item.x_traveled;
+					item.i += 0.2;
+					item.y += item.i*item.i;
+
+					item.scale.x -= 0.01;
+					item.scale.y -= 0.01;
+					//item.alpha = 1-(item.y-this.sy)/100;
+					
+					if (item.y > item.sy+100)
+						item.visible = false;
+				}
+			})
+
+		}
+	},
+	
+	load : function () {
+		
+		this.bloods=[];
+		for (let i=0;i<5;i++)
+			this.bloods.push(new this.particles());
+	},
+		
+	add: function(int_x,int_y,dir,P, coll_obj, coll_obj_id) {
+		
+		for (let i=0;i<this.bloods.length;i++) {
+			
+			if (this.bloods[i].active===0) {
+				
+				this.bloods[i].activate(int_x,int_y,dir,P, coll_obj, coll_obj_id);		
+				return;				
 			}
 		}
-		
 	},
 	
 	process: function () {
 		
-		//постоянно добавляем частицы
-		if (game_tick<this.start_time+1)
-			this.add_particle();
-				
-		//обрабатываем все частицы
-		this.sprites.forEach(item=>{
-			
-			if (item.visible===true) {
-				
-				item.x_traveled+=item.x_spd*this.dir;
-				item.x=item.sx+item.x_traveled;
-				item.y=item.sy+item.x_traveled*item.x_traveled*item.y_inc;
-				
-							
-				item.scale.x+=0.1;
-				item.scale.y+=0.1;
-				item.alpha=1-item.x/(-200);
-				
-				if (item.y>500) 
-					item.visible=false;
-			}				
-		})
-		
-		
+		this.bloods.forEach((item)=>{			
+			item.process();
+		})		
 	}
 
+
 }
 
-function get_line_intersection(p0_x, p0_y, p1_x, p1_y, p2_x, p2_y, p3_x, p3_y) {
-	let i_x, i_y;
-    let s1_x, s1_y, s2_x, s2_y;
-    s1_x = p1_x - p0_x;     s1_y = p1_y - p0_y;
-    s2_x = p3_x - p2_x;     s2_y = p3_y - p2_y;
-
-    let s, t;
-    s = (-s1_y * (p0_x - p2_x) + s1_x * (p0_y - p2_y)) / (-s2_x * s1_y + s1_x * s2_y);
-    t = ( s2_x * (p0_y - p2_y) - s2_y * (p0_x - p2_x)) / (-s2_x * s1_y + s1_x * s2_y);
-
-    if (s >= 0 && s <= 1 && t >= 0 && t <= 1)
-        return [p0_x + (t * s1_x), p0_y + (t * s1_y)];
-    return [-999, -999];
-}
-
-
-
-
-var me={
+skl_anim=	{
 		
-	body_col: [[125,383],[115,380],[113,358],[103,346],[92,343],[96,333],[100,323],[100,312],[91,303]],
-	head_col: [[94,303],[96,294],[96,291],[92,287],[92,284],[78,284],[75,296]],
-	life_level: 100,
-	updade_col: function(h_dist) {
 		
-		for (let i=0;i<left_body_col.length;i++){
-			this.body_col[i][0]=left_body_col[i][0];
-			this.body_col[i][1]=left_body_col[i][1]+h_dist;			
-		};
-		
-		for (let i=0;i<left_head_col.length;i++){
-			this.head_col[i][0]=left_head_col[i][0];
-			this.head_col[i][1]=left_head_col[i][1]+h_dist;			
-		};
-		
-	},
-	process: function(){		
-		
-	},	
-	shift : function(dx,dy) {	
-		
-	}
-}
-
-var opponent={
-		
-	body_col: [[125,383],[115,380],[113,358],[103,346],[92,343],[96,333],[100,323],[100,312],[91,303]],
-	head_col: [[94,303],[96,294],[96,291],[92,287],[92,284],[78,284],[75,296]],
-
-	life_level: 100,
-	updade_col: function(h_dist) {
-		
-		for (let i=0;i<right_body_col.length;i++){
-			this.body_col[i][0]=right_body_col[i][0];
-			this.body_col[i][1]=right_body_col[i][1]+h_dist;			
-		};
-		
-		for (let i=0;i<right_head_col.length;i++){
-			this.head_col[i][0]=right_head_col[i][0];
-			this.head_col[i][1]=right_head_col[i][1]+h_dist;			
-		};
-		
-	},
-	process: function(){
-		
-	},	
-	shift : function(dx,dy) {		
-		
-	}
-}
-
-var game={
+	slots: [{cont: 'player', source: 0,	pos:0,	time:0,	speed:0, on:0},{cont: 'enemy', source: 0,	pos:0,	time:0,	speed:0, on:0}],
 	
-	state: "online", pending_player: "", player_states: [], search_timeout_handler:0,wait_start:0,
-		
-	close_search_window: function() {
-				
-		if (objects.search_opponent_window.ready===false)
-			return;
-		
-		this.state="online";		
-		
-		//показываем контейнер с кнопками
-		objects.start_buttons_cont.show();
-		anim.add(objects.start_buttons_cont,'y',true,'easeOutCubic',-390, objects.start_buttons_cont.sy,0.02);
-		
-		//убираем контейнер с окном ожидания
-		anim.add(objects.search_opponent_window,'y',false,'easeInCubic',objects.search_opponent_window.sy,M_HEIGHT,0.04);
+	activate: function(cont_id,source) {		
+		this.slots[cont_id].on=1;
+		this.slots[cont_id].source=source;
+		this.slots[cont_id].pos=0;
+		this.slots[cont_id].time=0;
+		this.slots[cont_id].speed=0.5;
 	},
-		
-	start_idle_wait: function () {
-		
-		if (this.state==="idle" || objects.start_buttons_cont.ready===false)
-			return;
-				
-		//показываем контейнер с ожиданием
-		if (objects.search_opponent_window.visible===false)
-			anim.add(objects.search_opponent_window,'y',true,'easeOutCubic',-390, objects.search_opponent_window.sy,0.02);
-		
-		//убираем контейнер с кнопками
-		if (objects.start_buttons_cont.visible===true)
-			anim.add(objects.start_buttons_cont,'y',false,'easeInCubic',objects.start_buttons_cont.sy,M_HEIGHT,0.02);
 
-		//устанавливаем локальный статус
-		this.state="idle";
-	
-		//устанавливаем статус в базе данных
-		firebase.database().ref("states/"+my_data.uid).set("idle");
-
-		//запускаем поиск через определенное время
-		this.search_timeout_handler=setTimeout(this.search_and_send_request.bind(this), Math.floor(Math.random()*5000));
+	process: function() {
 		
-	},
-	
-	search_and_send_request() {
-			
-		if (this.state!=="idle") return;
-			
+		this.slots.forEach(p => {
 
-		for (var player_id in this.players_states) {
-
-			if (player_id!==my_data.uid && this.players_states[player_id]==="idle")	{			
-				firebase.database().ref("inbox/"+player_id).set({sender:my_data.uid,message:"REQ",timestamp:Date.now(),data:"-"});	
-				this.pending_player=player_id;
-				this.state="wait_response";
-				this.wait_start=Date.now();
-				console.log("sent REQ to "+player_id);
+			if (p.on===0)
 				return;
+					
+			for (var s in p.source) {
+				
+				objects[p.cont][s].x=p.source[s][p.pos][0];
+				objects[p.cont][s].y=p.source[s][p.pos][1];
+				objects[p.cont][s].rotation=p.source[s][p.pos][2];
 			}
+					
+			p.time+=p.speed;
+			p.pos=Math.floor(p.time);
+			if (p.pos>=p.source["left_arm1"].length)
+				p.on=0;
+		})
+				
+			
+	},
+	
+	tween: function(cont,source,amount) {
+		
+		for (var s in source) {
+			
+			cont[s].x=source[s][0][0]+source[s][2][0]*amount;
+			cont[s].y=source[s][0][1]+source[s][2][1]*amount;
+			cont[s].rotation=source[s][0][2]+source[s][2][2]*amount;
+			
 		}
 		
-		//если пользователей не нашли то через некоторое время запускаем новый поиск
-		this.search_timeout_handler=setTimeout(this.search_and_send_request.bind(this), Math.floor(Math.random()*5000)+1000);
 	},
 	
-	players_list_updated(players) {
-
-		this.players_states=players;
-		var cnt=0;
-		for (var player_id in this.players_states)
-			if (this.players_states[player_id]!=="offline")
-				cnt++;
+	goto_frame: function(cont, source, frame_id) {
 		
-		objects.online_users_text.text="Игроков онлайн: "+cnt;
-	},
-	
-	process_new_message: function(msg) {	
-
-		//Получили запрос на новую игру
-		console.log("Сообщение: "+msg.message+ " Состояние: "+this.state +" sender:"+msg.sender +" pending: "+this.pending_player);
-		
-		if (this.state==="idle") {		
-		
-			//в данном состоянии принимаем только запросы о новой игре
-			if (msg.message==="REQ") {		
+		for (var s in source) {
 			
-				//отправляем сообщение о начале игры
-				firebase.database().ref("inbox/"+msg.sender).set({sender:my_data.uid,message:"OK",timestamp:Date.now(),data:0});
-				initiator="opponent";			
-				this.start_game(msg.sender);		
+			cont[s].x=source[s][frame_id][0];
+			cont[s].y=source[s][frame_id][1];
+			cont[s].rotation=source[s][frame_id][2];
+		}				
+	}			
+}   
+
+class player_class extends PIXI.Container{
+	
+	constructor(name) {
+		
+		super();
+		
+		this.name=name;
+		
+		this.spine=new PIXI.Sprite(); this.spine.width=40;	this.spine.height=80;	this.spine.anchor.set(0.5,0.5);
+		
+		this.left_arm1=new PIXI.Sprite();	this.left_arm1.width=40;	this.left_arm1.height=20;	this.left_arm1.anchor.set(0.5,0.5);
+		this.left_arm2=new PIXI.Sprite();	this.left_arm2.width=40;	this.left_arm2.height=20;	this.left_arm2.anchor.set(0.5,0.5);
+		this.right_arm1=new PIXI.Sprite();	this.right_arm1.width=40;	this.right_arm1.height=20;	this.right_arm1.anchor.set(0.5,0.5);
+		this.right_arm2=new PIXI.Sprite();	this.right_arm2.width=40;	this.right_arm2.height=20;	this.right_arm2.anchor.set(0.5,0.5);
+		
+		this.left_leg1=new PIXI.Sprite();	this.left_leg1.width=40;	this.left_leg1.height=20;	this.left_leg1.anchor.set(0.5,0.5);
+		this.left_leg2=new PIXI.Sprite();	this.left_leg2.width=40;	this.left_leg2.height=20;	this.left_leg2.anchor.set(0.5,0.5);
+		this.right_leg1=new PIXI.Sprite();	this.right_leg1.width=40;	this.right_leg1.height=20;	this.right_leg1.anchor.set(0.5,0.5);
+		this.right_leg2=new PIXI.Sprite();	this.right_leg2.width=40;	this.right_leg2.height=20;	this.right_leg2.anchor.set(0.5,0.5);
+		
+		this.projectile=new PIXI.Sprite();	this.projectile.width=90;	this.projectile.height=20;	this.projectile.anchor.set(0.5,0.5);
+				
+		this.stand=new PIXI.Sprite();
+		this.stand.x=10;
+		this.stand.y=135;		
+		
+		this.life_level_bcg=new PIXI.Sprite(game_res.resources.life_level_bcg.texture);
+		this.life_level_bcg.x=10;
+		this.life_level_frame=new PIXI.Sprite(game_res.resources.life_level_frame.texture);
+		this.life_level_frame.x=10;
+		this.life_level_front=new PIXI.Sprite(game_res.resources.life_level_front.texture);		
+		this.life_level_front.x=20;
+		
+				
+		this.addChild(this.spine,this.left_arm1,this.left_arm2,this.right_arm1,this.right_arm2,this.left_leg1,this.left_leg2,this.right_leg1,
+		this.right_leg2,this.stand,this.projectile,this.life_level_bcg,this.life_level_front,this.life_level_frame);
+		
+		this.base_col=JSON.parse(JSON.stringify(col_data));		
+		this.cur_col=JSON.parse(JSON.stringify(col_data));			
+		
+		this.tm=0;
+		this.next_p=0;
+		this.next_time=0;
+		
+		this.life_level=100;
+
+	};
+	
+    shift_height(h_dist) {
+        anim.add_pos({obj: this, param: 'y',  vis_on_end: true,  func: 'easeOutBack', val: ['y', this.sy + h_dist], speed: 0.02 });
+    };
+	
+	decrease_life(val) {
+		
+		let new_lev=this.life_level-val;
+		new_lev=Math.max(0,new_lev);	
+		this.life_level=new_lev;
+		this.life_level_front.scale.x=this.life_level*0.01;
+	};
+	
+	process() {
+			
+		
+		test_sprite.lineStyle(2, 0xffffff);
+		test_sprite.moveTo(0,0);
+		
+		//обновляем коллизии		
+		for (let i=0;i<this.base_col.length;i++) {
+			
+			let limb_name=this.base_col[i][0];
+			let ref_name=this.base_col[i][1];
+			let data=this.base_col[i][2];
+			
+			let rot=this[ref_name].rotation;	
+			
+			for (let p = 0; p < data.length; p++) {
+				
+				let x=data[p][0];
+				let y=data[p][1];
+
+				let tx = x * Math.cos(rot) - y * Math.sin(rot);
+				let ty = x * Math.sin(rot) + y * Math.cos(rot);
+
+
+				if (this.scale.x===1) {
+					this.cur_col[i][2][p][0] = this.x+this[ref_name].x+tx;
+					this.cur_col[i][2][p][1] = this.y+this[ref_name].y+ty;					
+				} else {
+					this.cur_col[i][2][p][0] = this.x-this[ref_name].x-tx;
+					this.cur_col[i][2][p][1] = this.y+this[ref_name].y+ty;		
+				}
+			
+				test_sprite.lineTo(this.cur_col[i][2][p][0],this.cur_col[i][2][p][1]);
+			}; 		
+		}
+		
+		//обрабатываем данный код только если идет игра
+		if (state!=="playing")
+			return;			
+				
+		//для оппонента обновляем дополнительные процессы
+		if(this.scale.x===-1) {
+			
+			if (game_tick>this.tm+this.next_time) {
+
+				
+				let v0=this.next_p;
+				let x0 = objects.enemy.x+objects.enemy.width/2;
+				let y0 = objects.enemy.y+50;
+
+				let x1 = objects.player.x+objects.player.width/2;
+				let y1 = objects.player.y+65;
+				
+				let dx=x0-x1;
+				let dh=y1-y0;
+				
+				//решение уравнения взято отсюда https://www.youtube.com/watch?v=32PiZDW40VI
+				let R=dx/v0; R=R*R*4.9;
+				let a=R;
+				let b=dx;
+				let c=R-dh;
+				let Q1=-Math.random()*0.3;
+				let Q2=0;
+						
+				let root1= b * b - (4 * a * c);
+				
+				//если есть решение то используем его
+				if (root1>=0) {					
+					let root = Math.sqrt(root1);					
+					let tanQ1 = (-b + root) / (2 * a);
+					let tanQ2 = (-b - root) / (2 * a);					
+					Q1=Math.atan(tanQ1);
+					Q2=Math.atan(tanQ2);					
+				}				
+				
+				console.table(root1, v0,Q1);
+				
+				//запускаем локальный снаряд
+				projectiles.add(Q1,v0, objects.player, objects.enemy.projectile.texture);
+									
+				//убираем копье и возвращаем его через некоторое время
+				this.projectile.visible=false;
+				setTimeout(function(){objects.enemy.projectile.visible=true},300);			
+							
+				//запускаем анимацию
+				skl_anim.activate(1,skl_throw);
+				
+				let r_num=Math.random();
+				this.next_p=r_num*100+30;
+				this.next_time=r_num*3+1;
+				this.tm=game_tick;
 			}			
 		}
+		
+
+
+	
+	};
+	
+	set_start(skin) {
+
+		this.left_leg1.texture=game_res.resources[skin+'left_leg1'].texture
+		this.left_leg2.texture=game_res.resources[skin+'left_leg2'].texture
+		this.right_leg1.texture=game_res.resources[skin+'right_leg1'].texture
+		this.right_leg2.texture=game_res.resources[skin+'right_leg2'].texture
+		
+		this.left_arm1.texture=game_res.resources[skin+'left_arm1'].texture
+		this.left_arm2.texture=game_res.resources[skin+'left_arm2'].texture
+		this.right_arm1.texture=game_res.resources[skin+'right_arm1'].texture
+		this.right_arm2.texture=game_res.resources[skin+'right_arm2'].texture
+		
+		this.spine.texture=game_res.resources[skin+'spine'].texture
+		this.projectile.texture=game_res.resources[skin+'projectile'].texture
 				
-		//получение положительного ответа от игрока которому мы отправляли запрос и который уже создал игру
-		if (this.state==="wait_response") {
+		this.life_level=100;
+		
 			
-			//принимаем только положительный ответ от соответствующего соперника и начинаем игру
-			if (msg.message==="OK"  && this.pending_player===msg.sender) {				
-				initiator="me";
-				this.start_game(msg.sender);	
-			}
-								
 
-		}
+		this.life_level_front.scale.x=this.life_level*0.01;
 		
-		//получение сообщение в состояни игры
-		if (this.state==="playing") {
-			
-			//учитываем только сообщения от соперника
-			if (msg.sender===opp_data.uid) {
-				
-				//получение сообщение с ходом игорка
-				if (msg.message==="MOVE")
-					this.receive_move(msg.data);
-
-				//получение сообщение с сдаче
-				if (msg.message==="END" )
-					this.finish_game(msg.data.board_state);	
-
-				//получение стикера
-				if (msg.message==="MSG")
-					this.receive_sticker(msg.data);
-				
-				//получение отказа от игры
-				if (msg.message==="REFUSE")
-					this.finish_game(16);
-				
-				//получение согласия на игру
-				if (msg.message==="CONF")
-					this.opp_confirmed_play=true;
-				
-			}
-		}
-	
-	},
-	
-	read_opponent_data: function(opp_uid) {
+		this.tm=game_tick;
 		
-		firebase.database().ref("players/"+opp_uid).once('value').then((snapshot) => {
-		  if (snapshot.val()===null) {
-			  alert("Не получилось загрузить данные о сопернике");
-		  }
-		  else {
-			  
-			  
-			opp_data={...opp_data,...snapshot.val()};			  
+		let r_num=Math.random();
+		this.next_p=r_num*100+50;
+		this.next_time=r_num*3+1;
 		
-			//загружаем аватар соперника
-			var loaderOptions = {loadType: PIXI.loaders.Resource.LOAD_TYPE.IMAGE};
-			var player_data=snapshot.val();
-			var loader = new PIXI.Loader(); // PixiJS exposes a premade instance for you to use.
-			loader.add('opponent_avatar', opp_data.pic_url,loaderOptions);
-			loader.load((loader, resources) => {objects.opponent_avatar.texture = resources.opponent_avatar.texture;});
-			
-			//также отображаем имя
-			let trimmed_text=opp_data.first_name +" "+opp_data.last_name;
-			trimmed_text = trimmed_text.length > 15 ?  trimmed_text.substring(0, 12) + "..." : trimmed_text;
-			objects.opponent_name_text.text=trimmed_text;
-			objects.opponent_rating_text.text=opp_data.rating;
-			
-		  }
-		});
-		
-	},
-	
-	start_game : function(opp_uid) {
-		
-		
-
-		
-		//нужно загрузить данные о сопернике и его фото
-		opp_data.uid=opp_uid;
-		this.read_opponent_data(opp_data.uid);
-		
-		if (initiator==="me") {
-			me.updade_col(0);
-			opponent.updade_col(0);
-			[objects.opponent_cont.y, objects.my_cont.y]=[ objects.opponent_cont.y,objects.my_cont.y];
-		}else{
-			let dif=right_head_col[0][1]-left_head_col[0][1];
-			me.updade_col(dif);
-			opponent.updade_col(-dif);
-			[objects.opponent_cont.y, objects.my_cont.y]=[objects.my_cont.y,objects.opponent_cont.y];
-		}
-		
-		//убираем окно ожидания
-		anim.add(objects.search_opponent_window,'y',false,'easeInCubic', objects.search_opponent_window.sy,-390,0.02);
-		
-		//отключаем подписку на обновление пользователей
-		firebase.database().ref("states").off();
-		
-		//добавляем подписку на состояние оппонента
-		firebase.database().ref("states/"+opp_data.uid).on('value', (snapshot) => { this.opponent_state_changed(snapshot.val());});
-		
-		//записываем что игрок перешел в сосотяние игры
-		firebase.database().ref("states/"+my_data.uid).set("playing");
-		this.state="playing";
-		
-	},
-	
-	opponent_state_changed: function(s) {			
-		if (s==="offline" || s==="online")
-			alert("Оппонент поникул игру");
-	},
-	
-	receive_move: function(t_data) {
-		
-		[t_data.x0,t_data.x1]=[t_data.x1,t_data.x0];
-		
-		let projectile_data=calc_projectile_parameters(t_data);
-		projectile.add(projectile_data,"me");
-		console.table( t_data)
-	},
-	
-	send_move: function(t_data) {
-			
-			if (this.state!=="playing") {
-				//alert("Игра не создана");
-				return;			
-			}	
-					
-					
-			//отправляем ход с состоянием оппоненту
-			firebase.database().ref("inbox/"+opp_data.uid).set({sender:my_data.uid,message:"MOVE",timestamp:Date.now(),data:t_data});
-		}
-	
-}
-var projectile={
-	
-	i:0, t_inc:0, vy0:0, vx0:0, shift_x:0, shift_y:0, x_inc: 1, on : 0, target : "me", process: function (){},
-	
-	add: function(projectile_data, target) {
-		
-		this.vx0	=	projectile_data.vx0;
-		this.vy0	=	projectile_data.vy0;
-		this.t_inc	=	projectile_data.t_inc*Math.sign(this.vx0);
-		
-		this.target=target;
-		this.x_inc	= target==="me" ?	this.vx*16: -this.vx*16 ;
-			
-		if (target==="me") {
-			this.x_inc	= -16;
-			this.shift_x = objects.opponent_cont.x+objects.opponent_top.x;
-			this.shift_y = objects.opponent_cont.y;			
-		} else {
-			this.x_inc	= 16;
-			this.shift_x = objects.my_cont.x+objects.my_top.x;
-			this.shift_y = objects.my_cont.y;
-		}
-		
-		this.i=0;
-		this.on=1;
-		objects.arrow.visible=true;
-		objects.arrow.alpha=1;	
-
-		this.process=this.process_go;
-
-	},
-		
-	get_line: function() {
-		
-		let dx=Math.cos(objects.arrow.rotation);
-		let dy=Math.sin(objects.arrow.rotation);
-		
-		let x0=objects.arrow.x+dx*objects.arrow.width/2;
-		let y0=objects.arrow.y+dy*objects.arrow.width/2;
-		
-		let x1=objects.arrow.x-dx*objects.arrow.width/2;
-		let y1=objects.arrow.y-dy*objects.arrow.width/2;
-		
-		return [x0,y0,x1,y1];
-		
-	},
-	
-	stop: function() {
-		
-		this.on=0;
-		this.process=this.process_stop;
-		
-	},
-	
-	process_go: function() {
-		
-		if (objects.arrow.visible===false)
-			return;
-					
-		let t=this.i*this.t_inc;		
-		let vy=this.vy0+t*9.8;
-		objects.arrow.rotation=Math.atan2(vy, this.vx0);
-
-		objects.arrow.x=this.shift_x+this.i*this.x_inc;
-		objects.arrow.y=this.shift_y+this.vy0*t+0.5*9.8*t*t;
-		
-		if (objects.arrow.x>900 || objects.arrow.x<-100 || objects.arrow.y>600 || objects.arrow.x<-100)
-			objects.arrow.visible=false;
-		
-		this.i++;
-				
-		if (this.i===51) {	need_throw=0;	objects.arrow.visible=false;};
-	},
-	
-	process_stop: function () {
-		
-		objects.arrow.alpha-=0.04;
-		if (objects.arrow.alpha<=0)	{
-			objects.arrow.alpha=1;
-			objects.arrow.visible=false;
-			this.process=()=>{};
-		}
-		
+		//устанавливаем вид игроков
+		skl_anim.goto_frame(this,skl_throw,0);
 	}
 
 }
 
-function process_collisions() {
+var search_opponent = {
+
+	tm : {},
 	
-	if (projectile.on===1) {
+    start: function () {
+
+
+
 		
-		let target=window[projectile.target];
-		let targets=[target.body_col,target.head_col];
-		let l=projectile.get_line();
+		//это время когда начали поиска
+		this.tm.start_time=game_tick;		
 		
-		targets.forEach((obj)=>{
-			for (let i=0;i<obj.length-1;i++) {
-				
-				let res=get_line_intersection(l[0],l[1],l[2],l[3], obj[i][0], obj[i][1], obj[i+1][0], obj[i+1][1]);
-				if (res[0]!==-999) {
-					particle_engine.start(res[0],res[1],-Math.sign(projectile.x_inc));
-					projectile.stop();
-					return 1;			
-				}
-			}	
-		})
-	}
-	
+		state="idle";
+
+		//устанавливаем процессинговую функцию
+		g_process=function(){search_opponent.process()};
+
+        //++++++++++++++++++++
+        anim.add_pos({
+            obj: objects.search_opponent_window,
+            param: 'y',
+            vis_on_end: true,
+            func: 'easeOutBack',
+            val: [450, 'sy'],
+            speed: 0.02
+        });
+
+    },
+
+    process: function () {
+
+    	if (state!=="idle")
+    	    return;
+
+
+        objects.search_opponent_progress.rotation += 0.1;
+			
+		if (game_tick>this.tm.start_time+1) {
+			
+			game.h_data = [0, -20];
+			this.found();
+			
+		}
+    },
+
+	found: function () {
+		
+        //убриаем окно поиска
+        this.hide();
+
+        state="playing";
+		
+		g_process=function(){};
+		
+		//активируем игру
+		game.activate();
+		
+	},
+
+    cancel: function () {
+
+
+        if (objects.search_opponent_window.ready === false)
+            return;
+
+		//возвращаем состояния обратно
+        state = "online";
+        firebase.database().ref("states/" + my_data.uid).set(state);
+
+        //убриаем окно поиска
+        this.hide();
+		
+		g_process=function(){};
+		
+		//обратно в состояние главного меню
+		main_menu.activate();
+
+    },
+
+    hide: function () {
+
+        //--------------------
+       anim.add_pos({
+            obj: objects.search_opponent_window,
+            param: 'y',
+            vis_on_end: true,
+            func: 'easeInBack',
+            val: ['sy',450],
+            speed: 0.02
+        });
+    }
+
 }
 
-var anim={
+var projectiles = {
+
+    a : [],
+
+    projectile_class: class extends PIXI.Sprite {
+
+		constructor() {
+			super();
+			this.x0 = 0;
+			this.y0 = 0;
+			this.damage=10;
+			this.on = 0;
+			this.vx0 = 0;
+			this.vy0 = 0;
+			this.coll_obj=0;
+			this.coll_obj_id=0;
+			
+			this.sx=0;
+			this.sy=0;
+			
+			
+			this.int_x=0;
+			this.int_y=0;
+			
+			this.P=0;
+			this.t=0;
+			this.disp=0;
+			this.target = "me";
+			this.visible=false;
+
+			this.anchor.set(0.5,0.5);
+			this.process=function(){};
+			app.stage.addChild(this);			
+			
+		};		
 		
-	c1: 1.70158,
-	c2: 1.70158 * 1.525,
-	c3: 1.70158 + 1,
-	c4: (2 * Math.PI) / 3,
-	c5: (2 * Math.PI) / 4.5,
+		activate(Q,P, target, spear) {
+			
+			this.texture=spear;
+			
+			this.vx0 = Math.cos(Q)*P;
+			this.vy0 = Math.sin(Q)*P;
+			
+			this.target = target;
+
+			if (target.name === "player") {
+				this.scale.x=-1;
+				this.vx0=-this.vx0;
+				this.x0 = objects.enemy.x+objects.enemy.width/2;
+				this.y0 = objects.enemy.y+60;
+			} else {
+				this.scale.x=1;
+				this.x0 = objects.player.x+objects.player.width/2;
+				this.y0 = objects.player.y+60;
+			}
+			
+			this.width=90;
+			this.height=20;
+			
+			this.P=P;
+			this.t=0;
+			
+			this.rotation=Q;
+
+			this.process=this.process_go;
+			this.on = 1;
+			this.visible = true;
+			this.alpha = 1;
+			
+		};
+				
+		get_line () {
+
+			let dx = Math.cos(this.rotation);
+			let dy = Math.sin(this.rotation);
+			
+			let cor_width=this.width-15;
+
+			let x0 = this.x + dx * cor_width / 2;
+			let y0 = this.y + dy * cor_width / 2;
+
+			let x1 = this.x - dx * cor_width / 2;
+			let y1 = this.y - dy * cor_width / 2;
+
+			return [x0, y0, x1, y1];
+
+		};
+		
+		stop(int_x,int_y, coll_obj, coll_obj_id) {
+				
+				
+			this.int_x=int_x;
+			this.int_y=int_y;
+			
+			this.sx=this.x;
+			this.sy=this.y;
+						
+			this.on = 0;
+			this.process = this.process_stop;
+			
+			this.coll_obj=coll_obj;
+			this.coll_obj_id=coll_obj_id;
+			
+			//вычисляем расстояние от начала линии коллизии до точки пересечения
+			let dx=int_x-this.coll_obj[this.coll_obj_id][0];
+			let dy=int_y-this.coll_obj[this.coll_obj_id][1];
+			this.disp=Math.sqrt(dx*dx+dy*dy);
+			
+			
+			
+			
+			
+				
+		};
+		
+		process_go() {
+			
+			if (this.visible === false)
+				return;
+			
+			let vx=this.vx0;
+			let vy=9.8*this.t+this.vy0;
+
+			this.x = this.x0+vx*this.t;
+			this.y = this.y0+0.5*9.8*this.t*this.t+this.vy0*this.t;
+			
+			this.rotation=Math.atan(vy/vx);	
+			this.t+=0.1;
+
+
+			if (this.x>800 || this.x<0 || this.y>600 || this.y<-100) {
+				this.on = 0;
+				this.visible = false;
+			}
+			
+		};
+		
+		process_stop () {
+
+			this.alpha -= 0.005;
+			if (this.alpha <= 0) {
+				this.alpha = 1;
+				this.visible = false;
+				this.process = () => {};
+			}
+			
 	
-	anim_array: [null,null,null,null,null,null,null,null,null],	
-	linear: function(x) {
+			let dx=this.coll_obj[this.coll_obj_id+1][0]-this.coll_obj[this.coll_obj_id][0];
+			let dy=this.coll_obj[this.coll_obj_id+1][1]-this.coll_obj[this.coll_obj_id][1];
+			let d=Math.sqrt(dx*dx+dy*dy);
+			dx=dx/d;
+			dy=dy/d;
+			
+			this.x = this.sx+(this.coll_obj[this.coll_obj_id][0]+dx*this.disp-this.int_x);
+			this.y = this.sy+(this.coll_obj[this.coll_obj_id][1]+dy*this.disp-this.int_y);
+			
+			
+		}	
 		
-		return x
-	},
-	linear_and_back: function(x) {
+
+    },
+	
+	init: function() {
 		
-		return x < 0.2 ? x*5 : 1.25 - x * 1.25
-
+		for (let i=0;i<10;i++)
+			this.a.push(new this.projectile_class());
 	},
-	easeOutElastic: function(x) {
-		return x === 0
-			? 0
-			: x === 1
-			? 1
-			: Math.pow(2, -10 * x) * Math.sin((x * 10 - 0.75) * c4) + 1;
-	},	
-	easeOutBounce: function(x) {
-		const n1 = 7.5625;
-		const d1 = 2.75;
 
-		if (x < 1 / d1) {
-			return n1 * x * x;
-		} else if (x < 2 / d1) {
-			return n1 * (x -= 1.5 / d1) * x + 0.75;
-		} else if (x < 2.5 / d1) {
-			return n1 * (x -= 2.25 / d1) * x + 0.9375;
-		} else {
-			return n1 * (x -= 2.625 / d1) * x + 0.984375;
+    add: function (Q,P, target, spear) {
+		
+		for (let i=0;i<10;i++) {
+			if (this.a[i].visible===false){
+				this.a[i].activate(Q,P, target, spear);
+				return;				
+			}
 		}
-	},	
-	easeOutCubic: function(x) {
-		return 1 - Math.pow(1 - x, 3);
+		
 	},
-	easeOutQuart: function(x) {
-		return 1 - Math.pow(1 - x, 4);
+
+    process: function () {		
+		
+		for (let i=0;i<10;i++)
+			this.a[i].process();
 	},
-	easeOutQuint: function(x) {
-		return 1 - Math.pow(1 - x, 5);
-	},
-	easeInCubic: function(x) {
-		return x * x * x;
-	},
-	easeInQuint: function(x) {
-		return x * x * x * x * x;
-	},
-	easeOutBack: function(x) {
-		return 1 + this.c3 * Math.pow(x - 1, 3) + this.c1 * Math.pow(x - 1, 2);
-	},
-	easeInBack: function(x) {
-		return this.c3 * x * x * x - this.c1 * x * x;
-	},
-	add: function(obj,param,vis_on_end,func,start_val,end_val,speed, callback){
+	
+	calc_parameters: function(t_data) {
+
+		let dx=t_data.x1-t_data.x0;
+		let dy=t_data.y1-t_data.y0;
+		let v0=Math.sqrt(dx*dx+dy*dy);
+		let Q=Math.atan2(dy, dx);
+				
+		let vy0=Math.sin(Q)*v0;
+		let vx0=Math.cos(Q)*v0;	
+		let t_inc=16/v0/Math.cos(Q);
+		
+		return {vx0,vy0,t_inc};
+	}
+
+}
+
+var big_message={
+	
+	callback_func: function(){},
+	
+	show: function(text,text2,callback) {
+		
+		any_dialog_active=1;
+		
+
+		if (text2!==undefined || text2!=="")
+			objects.big_message_text2.text=text2;
+		else
+			objects.big_message_text2.text='**********';
 		
 		if (callback===undefined)
-			callback=()=>{};
-		
-		//ищем свободный слот для анимации
-		for (var i=0;i<this.anim_array.length;i++)	{
+			this.callback_func=()=>{};
+		else
+			this.callback_func=callback;
+
+		objects.big_message_text.text=text;
+		anim.add_pos({obj:objects.big_message_cont,param:'y',vis_on_end:true,func:'easeOutBack',val:[-180, 	'sy'],	speed:0.02});
 			
-			if (this.anim_array[i]===null)	{
-			
-				obj.visible=true;
-				obj.alpha=1;
-				obj.ready=false;
-				obj[param]=start_val;
-				var delta=end_val-start_val;	
-				this.anim_array[i]={obj:obj,param:param,vis_on_end:vis_on_end,delta:delta,func:this[func],start_val:start_val,speed:speed,progress:0, callback: callback};	
-				return;
-			}
-			
-		}
-		
-		alert("Нет свободных слотов для анимации");
-		
 	},
-	process: function()	{
-		for (var i=0;i<this.anim_array.length;i++)	{
-			if (this.anim_array[i]!==null)	{
-				let anim_data=this.anim_array[i];
-
-				anim_data.obj[anim_data.param]=anim_data.start_val+anim_data.delta*anim_data.func(anim_data.progress);
-				anim_data.progress+=anim_data.speed;
-				
-				if (anim_data.progress>=1)	{
-					anim_data.callback();
-					anim_data.obj.visible=anim_data.vis_on_end;
-					anim_data.obj.ready=true;
-					this.anim_array[i]=null;					
-				}
-			}
-		}
-	}
 	
-}
-
-function calc_projectile_parameters(t_data) {
-
-	let dx=t_data.x1-t_data.x0;
-	let dy=t_data.y1-t_data.y0;
-	let v0=Math.sqrt(dx*dx+dy*dy);
-	let Q=Math.atan2(dy, dx);
-
-			
-	let vy0=Math.sin(Q)*v0;
-	let vx0=Math.cos(Q)*v0;	
-	let t_inc=16/v0/Math.cos(Q);
-	
-	return {vx0,vy0,t_inc};
-}
-
-function init_game() {
-	
-	
-	objects.bcg.pointerdown=function(e) {	
-	
-		touch_data.x0 = e.data.global.x/app.stage.scale.x;
-		touch_data.y0 = e.data.global.y/app.stage.scale.y;	
+	close : function() {
 		
-		touch_data.x1 = touch_data.x0;
-		touch_data.y1 = touch_data.y0;	
+		any_dialog_active=0;
 		
-		objects.my_top.texture=game_res.resources["my_top"].texture;
-		drag=1;		
+		//вызываем коллбэк
 		
-	};	
-	
-	objects.bcg.pointermove=function(e) {	
-			
-		if (drag===1) {
-			touch_data.x1 = e.data.global.x/app.stage.scale.x;
-			touch_data.y1 = e.data.global.y/app.stage.scale.y;	
-			update_on_drag();
-		}
-	};	
-
-	objects.bcg.pointerup=function(){
+		this.callback_func();
+		//game_res.resources.close.sound.play();
 		
-		if (drag===0)
+		if (objects.big_message_cont.ready===false)
 			return;
 		
-		drag=0;
-		game.send_move(touch_data);
-		let projectile_data=calc_projectile_parameters(touch_data);
-		projectile.add(projectile_data,"opponent");
-		guide_line.visible=guide_line2.visible=false;		
-		anim.add(objects.my_top,'rotation',true,'linear',objects.my_top.rotation, objects.my_top.rotation+Math.PI/2,0.1, function(){
-			anim.add(objects.my_top,'rotation',true,'linear',objects.my_top.rotation, 0,0.1, ()=>{
-				objects.my_top.texture=game_res.resources["top_ready"].texture;
-			})			
-		});
+		any_dialog_active=0;
+		anim.add_pos({obj:objects.big_message_cont,param:'y',vis_on_end:false,func:'easeInBack',val:['sy', 	450],	speed:0.05});
 		
-
-	};	
-	
-	app.stage.addChild(guide_line, guide_line2);
-}
-
-function update_on_drag() {
-	
-	if (guide_line.visible===false)
-		guide_line.visible=guide_line2.visible=true;	
-
-	let dx=touch_data.x1-touch_data.x0;
-	let dy=touch_data.y1-touch_data.y0;
-	
-	let v0=Math.sqrt(dx*dx+dy*dy);
-	v0=Math.max(50, Math.min(v0, 120));
-	
-	let Q=Math.atan2(dy, dx);
-	Q=Math.max(-0.785398, Math.min(Q, 0));
-	
-	
-	//обновляем данные на основе корректированной длины
-	touch_data.x1=touch_data.x0+v0*Math.cos(Q);	
-	touch_data.y1=touch_data.y0+v0*Math.sin(Q);	
-	
-		
-	objects.my_top.rotation=Q;
-	
-	let shift_x = objects.my_cont.x+objects.my_top.x;
-	let shift_y = objects.my_cont.y;	
-	
-	guide_line.clear();
-	guide_line.lineStyle(1, 0x00ff00)		
-	guide_line.moveTo(touch_data.x0,touch_data.y0);
-	guide_line.lineTo(touch_data.x1,touch_data.y1);		
-	
-	guide_line2.clear();
-	guide_line2.lineStyle(2, 0xff0000)		
-	guide_line2.moveTo(shift_x,shift_y);
-	
-	//вычисляем  кривую движения снаряда
-	let vy0=Math.sin(Q)*v0;
-	let vx0=Math.cos(Q)*v0;
-	let t_inc=800/v0/Math.cos(Q)/50;	
-	
-	for (let i=1;i<20;i++) {			
-		let t=i*t_inc;	
-		guide_line2.lineTo(shift_x+i*16,shift_y+vy0*t+0.5*9.8*t*t);			
-	}
-	
-}
-
-function load() {
-	
-		
-	game_res=new PIXI.Loader();	
-	game_res.add("m2_font", "m_font.fnt");
-	
-	//добавляем из листа загрузки
-	for (var i=0;i<load_list.length;i++)
-		if (load_list[i][0]=="sprite" || load_list[i][0]=="image") 
-			game_res.add(load_list[i][1], "res/"+load_list[i][1]+".png");
-	
-	
-	
-	result = prompt("введите ИД");
-
-	my_data.first_name="_"+result;
-	my_data.last_name='';
-	my_data.uid="id"+result;
-	my_data.pic_url="https://games-sdk.yandex.ru/api/sdk/v1/player/avatar/QOLKPU4YFODTRPL5OQ4WQAE6N676RI66CAYPJ7DF7V2KXISZDYLQTF44V6TINKIPEVZXO4HAA5K3TG6NKPD4WVXNLTMC47XLAYK3NMMKUDOJQYXSUDDBGLKFXWQDAGVQBFYRSBHVNAPFFJB3WDVI6AY=/islands-retina-middle"
-
-	my_data.rating=1400;
-		
-	
-	game_res.load(load_complete);		
-	game_res.onProgress.add(progress);
-	
-	function resize_screen() {
-		const vpw = window.innerWidth;  // Width of the viewport
-		const vph = window.innerHeight; // Height of the viewport
-		let nvw; // New game width
-		let nvh; // New game height
-		
-		if (vph / vpw < M_HEIGHT / M_WIDTH) {
-		  nvh = vph;
-		  nvw = (nvh * M_WIDTH) / M_HEIGHT;
-		} else {
-		  nvw = vpw;
-		  nvh = (nvw * M_HEIGHT) / M_WIDTH;
-		}    
-		app.renderer.resize(nvw, nvh);
-		app.stage.scale.set(nvw / M_WIDTH, nvh / M_HEIGHT);
 	}	
-		
-	function load_complete() {
-		
-		document.getElementById("m_bar").outerHTML = "";		
-		document.getElementById("m_progress").outerHTML = "";
-		
-		app = new PIXI.Application({width:M_WIDTH, height:M_HEIGHT,antialias:true,backgroundColor : 0x002200});
-		document.body.appendChild(app.view);
+}
 
-		//информация о положении курсора мыши
-		//mouse_pos=PIXI.InteractionData.global;
+var process_collisions=function() {
 
-		resize_screen();
-		window.addEventListener("resize", resize_screen);	
+	projectiles.a.forEach((proj)=>{
+		if(proj.on===1) {
 			
-		//создаем спрайты и массивы спрайтов и запускаем первую часть кода
-		for (var i=0;i<load_list.length;i++) {			
-			const obj_class=load_list[i][0];
-			const obj_name=load_list[i][1];
-
-			switch(obj_class)
-			{			
-				case "sprite":
-					objects[obj_name]=new PIXI.Sprite(game_res.resources[obj_name].texture);
-					eval(load_list[i][2]);
-				break;
+			let l = proj.get_line();	
+		
+			for (let i=0;i<proj.target.cur_col.length;i++) {
 				
-				case "block":
-					eval(load_list[i][2]);						
-				break;
+				let limb_name=proj.target.cur_col[i][0];
+				let ref_shape=proj.target.cur_col[i][1];
+				let data=proj.target.cur_col[i][2];
 				
-				case "cont":
-					eval(load_list[i][2]);						
-				break;
+				for (let p = 0; p < data.length - 1; p++) {									
+											
+					let res = get_line_intersection(l[0], l[1], l[2], l[3], data[p][0], data[p][1], data[p + 1][0], data[p + 1][1]);
+					if (res[0] !== -999 && proj.on===1) {
+						
+						//добавляем поток крови и данные объекта с которым она столкнулась
+						particle_engine.add(res[0], res[1], -Math.sign(proj.vx0),proj.P, proj.target.cur_col[i][2], p);
+						
+						//останавливаем копье
+						proj.stop(res[0], res[1], proj.target.cur_col[i][2], p);
+						
+						//основной уровн копья
+						let sum_damage=proj.damage;
+											
+						////уменьшаем жизнь
+						proj.target.decrease_life(Math.round(sum_damage));
+						
+						console.log(limb_name);
+						
+						//показываем хэдшот
+						if (limb_name==="head")						
+							game.add_headshot(proj.target);
+					}						
+				}					
+			}	
+			
+		}				
+	})	
 
-				case "array":
-					var a_size=load_list[i][2];
-					objects[obj_name]=[];
-					for (var n=0;n<a_size;n++)
-						eval(load_list[i][3]);		
-				break;
-			}
+	function get_line_intersection(p0_x, p0_y, p1_x, p1_y, p2_x, p2_y, p3_x, p3_y) {
+		let i_x,
+		i_y;
+		let s1_x,
+		s1_y,
+		s2_x,
+		s2_y;
+		s1_x = p1_x - p0_x;
+		s1_y = p1_y - p0_y;
+		s2_x = p3_x - p2_x;
+		s2_y = p3_y - p2_y;
+
+		let s,
+		t;
+		s = (-s1_y * (p0_x - p2_x) + s1_x * (p0_y - p2_y)) / (-s2_x * s1_y + s1_x * s2_y);
+		t = (s2_x * (p0_y - p2_y) - s2_y * (p0_x - p2_x)) / (-s2_x * s1_y + s1_x * s2_y);
+
+		if (s >= 0 && s <= 1 && t >= 0 && t <= 1)
+			return [p0_x + (t * s1_x), p0_y + (t * s1_y)];
+		return [-999, -999];
+	}
+
+}
+
+var anim = {
+
+    c1: 1.70158,
+    c2: 1.70158 * 1.525,
+    c3: 1.70158 + 1,
+    c4: (2 * Math.PI) / 3,
+    c5: (2 * Math.PI) / 4.5,
+
+    anim_array: [null, null, null, null, null, null, null, null, null, null, null],
+    linear: function (x) {
+
+        return x
+    },
+    linear_and_back: function (x) {
+
+        return x < 0.2 ? x * 5 : 1.25 - x * 1.25
+
+    },
+    easeOutElastic: function (x) {
+        return x === 0
+         ? 0
+         : x === 1
+         ? 1
+         : Math.pow(2, -10 * x) * Math.sin((x * 10 - 0.75) * this.c4) + 1;
+    },
+    easeOutBounce: function (x) {
+        const n1 = 7.5625;
+        const d1 = 2.75;
+
+        if (x < 1 / d1) {
+            return n1 * x * x;
+        } else if (x < 2 / d1) {
+            return n1 * (x -= 1.5 / d1) * x + 0.75;
+        } else if (x < 2.5 / d1) {
+            return n1 * (x -= 2.25 / d1) * x + 0.9375;
+        } else {
+            return n1 * (x -= 2.625 / d1) * x + 0.984375;
+        }
+    },
+    easeOutCubic: function (x) {
+        return 1 - Math.pow(1 - x, 3);
+    },
+    easeOutQuart: function (x) {
+        return 1 - Math.pow(1 - x, 4);
+    },
+    easeOutQuint: function (x) {
+        return 1 - Math.pow(1 - x, 5);
+    },
+    easeInCubic: function (x) {
+        return x * x * x;
+    },
+    easeInQuint: function (x) {
+        return x * x * x * x * x;
+    },
+    easeOutBack: function (x) {
+        return 1 + this.c3 * Math.pow(x - 1, 3) + this.c1 * Math.pow(x - 1, 2);
+    },
+    easeInBack: function (x) {
+        return this.c3 * x * x * x - this.c1 * x * x;
+    },
+    add_pos: function (params) {
+
+        if (params.callback === undefined)
+            params.callback = () => {};
+
+        //ищем свободный слот для анимации
+        for (var i = 0; i < this.anim_array.length; i++) {
+
+            if (this.anim_array[i] === null) {
+
+                params.obj.visible = true;
+                params.obj.alpha = 1;
+                params.obj.ready = false;
+
+                //если в параметрах обозначена строка  - предполагаем что это параметр объекта
+                if (typeof(params.val[0]) === 'string')
+                    params.val[0] = params.obj[params.val[0]];
+                if (typeof(params.val[1]) === 'string')
+                    params.val[1] = params.obj[params.val[1]];
+
+                params.obj[params.param] = params.val[0];
+                var delta = params.val[1] - params.val[0];
+                this.anim_array[i] = {
+                    obj: params.obj,
+                    process_func: this.process_pos.bind(this),
+                    param: params.param,
+                    vis_on_end: params.vis_on_end,
+                    delta,
+                    func: this[params.func].bind(anim),
+                    start_val: params.val[0],
+                    speed: params.speed,
+                    progress: 0,
+                    callback: params.callback
+                };
+                return;
+            }
+
+        }
+
+        console.log("Нет свободных слотов для анимации");
+
+    },
+    add_scl: function (params) {
+
+        if (params.callback === undefined)
+            params.callback = () => {};
+
+        //ищем свободный слот для анимации
+        for (var i = 0; i < this.anim_array.length; i++) {
+
+            if (this.anim_array[i] === null) {
+
+                params.obj.visible = true;
+                params.obj.alpha = 1;
+                params.obj.ready = false;
+
+                var delta = params.val[1] - params.val[0];
+                this.anim_array[i] = {
+                    obj: params.obj,
+                    process_func: this.process_scl.bind(this),
+                    param: params.param,
+                    vis_on_end: params.vis_on_end,
+                    delta,
+                    func: this[params.func].bind(anim),
+                    start_val: params.val[0],
+                    speed: params.speed,
+                    progress: 0,
+                    callback: params.callback
+                };
+                return;
+            }
+
+        }
+
+        console.log("Нет свободных слотов для анимации");
+
+    },
+    process: function () {
+        for (var i = 0; i < this.anim_array.length; i++)
+            if (this.anim_array[i] !== null)
+                this.anim_array[i].process_func(i);
+    },
+    process_pos: function (i) {
+
+        this.anim_array[i].obj[this.anim_array[i].param] = this.anim_array[i].start_val + this.anim_array[i].delta * this.anim_array[i].func(this.anim_array[i].progress);
+
+        if (this.anim_array[i].progress >= 1) {
+            this.anim_array[i].callback();
+            this.anim_array[i].obj.visible = this.anim_array[i].vis_on_end;
+            this.anim_array[i].obj.ready = true;
+            this.anim_array[i] = null;
+            return;
+        }
+
+        this.anim_array[i].progress += this.anim_array[i].speed;
+    },
+    process_scl: function (i) {
+
+        this.anim_array[i].obj.scale[this.anim_array[i].param] = this.anim_array[i].start_val + this.anim_array[i].delta * this.anim_array[i].func(this.anim_array[i].progress);
+
+        if (this.anim_array[i].progress >= 1) {
+            this.anim_array[i].callback();
+            this.anim_array[i].obj.visible = this.anim_array[i].vis_on_end;
+            this.anim_array[i].obj.ready = true;
+            this.anim_array[i] = null;
+            return;
+        }
+
+        this.anim_array[i].progress += this.anim_array[i].speed;
+    }
+
+}
+
+var main_menu = {
+	
+	activate : function() {
+		
+		//++++++++++++++++++++
+		anim.add_pos({
+			obj: objects.main_buttons_cont,
+			param: 'y',
+			vis_on_end: true,
+			func: 'easeOutBack',
+			val: [450, 'sy'],
+			speed: 0.02
+		});
+		
+	
+		anim.add_pos({
+			obj: objects.my_data_cont,
+			param: 'alpha',
+			vis_on_end: true,
+			func: 'linear',
+			val: [0, 1],
+			speed: 0.01
+		});
+		
+		objects.sprite_001.visible=true;
+		
+		
+		//обновляем шкалу достижений
+		exp.refresh();
+		
+		//показываем сколько игроков онлайн
+		objects.online_users_text.visible=true;
+		
+	},
+	
+	//нажатие на кнопку
+	play_button_down: function() {
+		
+        if (objects.main_buttons_cont.ready === false || any_dialog_active===1)
+            return;
+				
+		//*********выходим из состояния главного меню**********
+		
+		this.hide();
+		
+		//скрываем сколько игроков онлайн
+		objects.online_users_text.visible=false;
+		
+		//переходим в состояние поиска соперника
+		search_opponent.start();
+		
+	},
+	
+	lb_button_down: function() {
+		
+        if (objects.main_buttons_cont.ready === false || any_dialog_active===1)
+            return;
+		
+		this.hide();
+		lb.activate();
+		
+		
+	},
+	
+	hide: function() {
+		
+		objects.sprite_001.visible=false;
+			
+		//------------------------
+		anim.add_pos({
+			obj: objects.main_buttons_cont,
+			param: 'y',
+			vis_on_end: false,
+			func: 'easeInBack',
+			val: ['sy',450],
+			speed: 0.02
+		});
+		
+		//------------------------
+		anim.add_pos({
+			obj: objects.my_data_cont,
+			param: 'alpha',
+			vis_on_end: false,
+			func: 'linear',
+			val: [1,0],
+			speed: 0.02
+		});
+		
+		
+		
+	}
+	
+}
+
+var fp_menu= {
+	
+	activate : function() {
+		
+		//++++++++++++++++++++
+		anim.add_pos({
+			obj: objects.fp_cont,
+			param: 'y',
+			vis_on_end: true,
+			func: 'easeOutBack',
+			val: [450, 'sy'],
+			speed: 0.02
+		});
+		
+		
+	},
+	
+	//нажатие на кнопку
+	next_fp_down: function() {
+		
+		VK.api(
+			"users.get", {
+			access_token: '03af491803af491803af4918d103d800b3003af03af491863c040d61bee897bd2785a50',
+			fields: 'photo_50,has_photo,last_seen'
+		},
+			function (data) {
+				
+			let first_name = data.response[0].first_name;
+			let last_name = data.response[0].first_name;
+			let pic_url = data.response[0].photo_100;
+						
+			//загружаем аватар игрока
+			var loaderOptions = {loadType: PIXI.loaders.Resource.LOAD_TYPE.IMAGE};
+			var loader = new PIXI.Loader();
+			loader.add('fp_avatar', pic_url,loaderOptions);
+			
+			loader.load((loader, resources) => {
+				
+					objects.fp_avatar.texture=resources['fp_avatar'].texture;
+
+			});
+			
+			
+		})
+		
+	},
+	
+	//нажатие на кнопку
+	save_fp_down: function() {
+		
+
+		
+	},
+		
+	
+	
+	
+}
+
+var game = {
+
+
+	p_time: 0,
+	sec_check:0,
+	h_data:[0,0],
+	cur_round: 0,
+    process: function () {},
+
+    activate: function () {
+
+		//устанавливаем состояния
+		state = "playing";
+		
+		//устанавливаем высоты игроков
+		objects.player.shift_height(this.h_data[0]);
+		objects.enemy.shift_height(this.h_data[1]);	
+
+		//отображаем мой снаряд так как он мог исчезнуть в игре
+		objects.player.projectile.visible=true;
+
+		//устанавливаем фон
+		objects.bcg.texture=game_res.resources["bcg_1"].texture;
+
+		//отображаем игроков
+		objects.player.visible = true;
+		objects.enemy.visible = true;
+		
+	
+					
+		//включаем табло оппонента
+		objects.opponent_name_cont.visible = true;
+		objects.player_name_cont.visible = true;
+		
+		//обновляем мои данные
+		objects.my_avatar.texture=objects.my_data_photo.texture;
+		objects.player_name_text.text=objects.my_data_name.text;
+		objects.player_rating_text.text=objects.my_data_rating.text;
+		
+
+	
+		this.process_round(1);
+    },
+	
+	close: function() {
+		
+		//устанавливаем состояния
+		state = "online";
+		this.state="online";			
+		firebase.database().ref("states/" + my_data.uid).set(state);
+
+		g_process = function(){};	
+	
+		objects.player.visible = false;
+		objects.enemy.visible = false;
+		
+		//включаем табло оппонента
+		objects.opponent_name_cont.visible = false;
+		objects.player_name_cont.visible = false;
+
+		main_menu.activate();
+		
+	},
+		
+	process_round: function(init) {
+		
+        if (init === 1) {			
+		
+			this.p_time=game_tick;
+			this.state="playing"	
+			
+			//восстанавливаем жизни и количество копий
+			objects.player.set_start("sm_");
+			objects.enemy.set_start("sm_");
+			
+			//ежесекундная проверка событий
+			this.sec_check=game_tick;
+			
+            g_process = function(){game.process_round(0)};	
+
+        }		
+
+		if (drag===1) {
+			
+			objects.power_slider.scale.x+=charge_spd;
+			objects.power_slider.scale.x=Math.min(objects.power_slider.scale.x,1);
+		}
+				
+		
+		//таймер перестановки
+		if (game_tick>this.p_time+10) {		
+		
+			this.p_time=game_tick;						
+			
+			this.h_data = [-Math.random() * 150, -Math.random() * 150];	
+			//this.h_data = [0, -100];	
+			
+			objects.player.shift_height(this.h_data[0]);
+			objects.enemy.shift_height(this.h_data[1]);
+	
+		}	
+		
+		if (objects.player.life_level<=0) {		
+		
+			//запускаем анимацию				
+			skl_anim.activate(0,skl_lose);
+			
+			//завершаем игру
+			this.process_finish_game(1,0);	
+
+			return;
 		}
 		
-		//обрабатываем вторую часть кода в объектах
-		for (var i=0;i<load_list.length;i++) {			
-			const obj_class=load_list[i][0];
-			const obj_name=load_list[i][1];
-
-			switch(obj_class)
-			{			
-				case "sprite":
-					eval(load_list[i][3]);
-				break;
-				
-				case "block":
-					eval(load_list[i][3]);						
-				break;
-				
-				case "cont":
-					eval(load_list[i][3]);						
-				break;
-
-				case "array":
-					var a_size=load_list[i][2];
-					for (var n=0;n<a_size;n++)
-						eval(load_list[i][4]);		
-				break;
+		if (objects.enemy.life_level<=0) {		
+		
+			//запускаем анимацию				
+			skl_anim.activate(1,skl_lose);
+			
+			//завершаем игру
+			this.process_finish_game(1,1);	
+			
+			//отправляем информацию слейву
+			firebase.database().ref("inbox/" + opp_data.uid).set({sender: my_data.uid,message: "END",timestamp: Date.now(),data: 0 });		
+			
+			return;
+		}			
+		
+		
+					
+					
+		
+		
+	},
+			
+	process_finish_game: function (init,res) {
+		
+		if (init === 1) {	
+		
+			state="online";		
+					
+			//останавливаем мои движения
+			stop_my_movements();
+			objects.power_level_cont.visible=false;
+		
+			this.p_time=game_tick;
+			
+		
+			if (res===0) {
+				big_message.show("Поражение","Рейтинг: -1\nОпыт: +1");				
+				exp.upgrade(1);
+				my_data.rating-=1;
+				firebase.database().ref("players/" + my_data.uid+"/rating").set(my_data.rating);	
+				firebase.database().ref("players/" + my_data.uid+"/exp").set(my_data.exp);	
 			}
+				
+			if (res===1) {
+				exp.upgrade(3);	
+				my_data.rating+=1;
+				big_message.show("Победа","Рейтинг: +1\nОпыт: +3");					
+				firebase.database().ref("players/" + my_data.uid+"/rating").set(my_data.rating);	
+				firebase.database().ref("players/" + my_data.uid+"/exp").set(my_data.exp);	
+			}	
+	
+			if (res===2)
+				big_message.show("Ничья","!!!");	
+			
+			g_process = function(){game.process_finish_game(0)};	
 		}
-
-
-		particle_engine.init();
-
-		//инициализация игры
-		init_game();
+		
 		
 
-		//запрашиваем мою информацию из бд или заносим в бд новые данные если игрока нет в бд
-		firebase.database().ref("players/"+my_data.uid).once('value').then((snapshot) => {			
-			var data=snapshot.val();
+		
+		//выходим из игры
+		if (game_tick>this.p_time+3)
+			this.close();
+		
+	},
+		
+	add_headshot: function(t) {
+		
+		if (t==="me") 		
+			anim.add_pos({obj:objects.headshot,param:'x',vis_on_end:true,func:'easeOutElastic',val:[-130, 	70],	speed:0.04});
+		
+		if (t==="opponent")		
+			anim.add_pos({obj:objects.headshot,param:'x',vis_on_end:true,func:'easeOutElastic',val:[800, 	600],	speed:0.04});
+		
+		setTimeout(function(){objects.headshot.visible=false},2000);
+		
+	}
+
+}
+
+var stop_my_movements = function () {
+
+    guide_line.clear();
+    guide_line2.clear();
+
+    guide_line.visible = false;
+    guide_line2.visible = false;
+
+    drag = 0;
+}
+
+var load_user_data = {
+
+    // эта функция вызывается один раз в начале игры
+    req_result: "",
+
+    vk: function () {
+
+        if (typeof(VK) === 'undefined') {
+            this.req_result = 'vk_sdk_error';
+            process_results();
+        } else {
+
+            VK.init(
+
+                //функция удачной инициализации вконтакте
+                function () {
+                VK.api(
+                    "users.get", {
+                    access_token: '03af491803af491803af4918d103d800b3003af03af491863c040d61bee897bd2785a50',
+                    fields: 'photo_100'
+                },
+                    function (data) {
+                    my_data.first_name = data.response[0].first_name;
+                    my_data.last_name = data.response[0].last_name;
+                    my_data.uid = "vk" + data.response[0].id;
+                    my_data.pic_url = data.response[0].photo_100;
+                    this.req_result = "vk_ok";
+                    this.process_results();
+                })
+            },
+
+                //функция неудачной инициализации вконтакте
+                function () {
+                this.req_result = 'vk_init_error';
+                this.process_results();
+            },
+
+                //версия апи
+                '5.130');
+
+        }
+
+    },
+
+    yandex: function () {
+
+        var sdk_res = '';
+        if (typeof(YaGames) === 'undefined') {
+            this.req_result = 'yndx_sdk_error';
+            this.process_results();
+        } else {
+            //если sdk яндекса найден
+            YaGames.init({}).then(ysdk => {
+
+                //фиксируем SDK в глобальной переменной
+                window.ysdk = ysdk;
+
+                //получаем данные игрока
+                ysdk.getPlayer().then(_player => {
+
+                    my_data.first_name = _player.getName();
+                    my_data.last_name = "";
+                    my_data.uid = _player.getUniqueID().replace("/", "Z");
+                    my_data.pic_url = _player.getPhoto('medium');
+
+                    this.req_result = 'ok';
+
+                    /*
+                    if (my_data.first_name==='')
+                    sdk_res='no_personal_data'
+                    else
+                    sdk_res='ok'*/
+
+                }).catch(err => {
+                    this.req_result = 'yndx_get_play_error';
+                }).finally(() => {
+                    this.process_results();
+                })
+
+            }).catch(err => {
+                this.req_result = 'yndx_init_error';
+            }).finally(() => {
+                this.process_results();
+            })
+
+        }
+
+    },
+
+    local: function () {
+
+        let test_id = prompt('Введите ID (будет добавле test)', 3);
+
+        this.req_result = 'ok'
+            my_data.first_name = "LOCAL" + test_id; ;
+        my_data.last_name = "test" + test_id;
+        my_data.uid = "test" + test_id;
+        my_data.pic_url = "https://sun9-73.userapi.com/impf/c622324/v622324558/3cb82/RDsdJ1yXscg.jpg?size=223x339&quality=96&sign=fa6f8247608c200161d482326aa4723c&type=album";
+        state = "online";
+
+        this.process_results();
+
+    },
+
+    process_results: function () {
+
+        //загружаем мою аватарку на табло
+        if (my_data.pic_url != undefined) {
+            let loader2 = new PIXI.Loader();
+            loader2.add('my_avatar', my_data.pic_url, {
+                loadType: PIXI.loaders.Resource.LOAD_TYPE.IMAGE
+            });
+            loader2.load((loader, resources) => {
+				objects.my_data_photo.texture=resources.my_avatar.texture;
+            });
+        }
+
+        if (this.req_result !== "ok") {
+            my_data.first_name = "Я";
+            my_data.last_name = "";
+            my_data.uid = "";
+			my_data.exp=0;
+            my_data.pic_url = undefined;
+            state = "offline";
+        }
+
+        //считываем рейтинг и обновляем данные об имени, фамилии и фото
+        if (this.req_result === "ok") {
+            net_play = 1;
+            this.init_firebase();
+        }
+
+        //Отображаем мое имя и фамилию на табло
+        let t = my_data.first_name;	
+		objects.my_data_name.text=t.length > 15 ? t.substring(0, 12) + "..." : t;
+		
+		
+		
+    },
+
+    init_firebase: function () {
+
+        //запрашиваем мою информацию из бд или заносим в бд новые данные если игрока нет в бд
+        firebase.database().ref().child("players/" + my_data.uid).get().then((snapshot) => {
+            var data = snapshot.val();
+            if (data === null) {
+                //если я первый раз в игре
+                my_data.rating = 1400;
+				my_data.exp = 0;
+                firebase.database().ref("players/" + my_data.uid).set({
+                    first_name: my_data.first_name,
+                    last_name: my_data.last_name,
+                    rating: my_data.rating,
+                    pic_url: my_data.pic_url,
+					exp: my_data.exp,
+					tm: firebase.database.ServerValue.TIMESTAMP
+                });
+            } else {
+                //если я уже есть в базе то считыавем мой рейтинг
+                my_data.rating = data.rating;
+				my_data.exp = data.exp;
+				
+				//обновляем так как получили данные
+				exp.refresh();
+				
+				
+                //на всякий случай обновляет данные так как могло поменяться имя или фамилия или фото
+                firebase.database().ref("players/" + my_data.uid).set({
+                    first_name: my_data.first_name,
+                    last_name: my_data.last_name,
+                    rating: my_data.rating,
+                    pic_url: my_data.pic_url,
+					exp: my_data.exp,
+					tm: firebase.database.ServerValue.TIMESTAMP
+                });
+            }
+
+            //и обновляем информацию на табло так как считали рейтинг
+			objects.my_data_rating.text = my_data.rating;
+
+        }).catch((error) => {
+            console.error(error);
+            return;
+        });
+
+
+        //устанавливаем мой статус в онлайн
+        firebase.database().ref("states/" + my_data.uid).set("online");
+
+
+        //отключение от игры и удаление не нужного
+        firebase.database().ref("states/" + my_data.uid).onDisconnect().remove();
+        firebase.database().ref("inbox/" + my_data.uid).onDisconnect().remove();
+
+    }
+
+}
+
+var exp= {
+	
+	upgrade: function(amount) {
+		
+		
+
+	
+	},
+	
+	refresh: function() {
+			
+
+		
+		
+	}
+	
+}
+
+var touch = {
+
+	Q:0,
+
+	touch_data : {
+		x0: 0,
+		y0: 0,
+		x1: 0,
+		y1: 0
+	},
+
+    down: function (e) {
+		
+		if (game.state!=="playing")
+			return;
+		
+
+        this.touch_data.x0 = e.data.global.x / app.stage.scale.x;
+        this.touch_data.y0 = e.data.global.y / app.stage.scale.y;
+
+        this.touch_data.x1 = this.touch_data.x0;
+        this.touch_data.y1 = this.touch_data.y0;
+
+		guide_line.visible = objects.dir_line.visible = true;
+		
+		objects.power_level_cont.visible=true;
+		objects.power_slider.scale.x=0;
+		
+		this.p=0;
+		
+		objects.dir_line.x = objects.player.x+objects.player.width/2;
+		objects.dir_line.y = objects.player.y+40;
+		
+        drag = 1;
+    },
+
+    move: function (e) {
+
+        if (drag === 1) {
+            this.touch_data.x1 = e.data.global.x / app.stage.scale.x;
+            this.touch_data.y1 = e.data.global.y / app.stage.scale.y;
+            
+			let dx = this.touch_data.x1 - this.touch_data.x0;
+			let dy = this.touch_data.y1 - this.touch_data.y0;
+
+			let v0 = Math.sqrt(dx * dx + dy * dy);
+			v0 = Math.max(50, Math.min(v0, 80));
+
+			this.Q = Math.atan2(dy, dx);
+			this.Q = Math.max(-0.785398, Math.min(this.Q, 0.758398));
+			
+			skl_anim.tween(objects.player,skl_prepare,0.5+this.Q/0.785398/2);
+
+			//обновляем данные на основе корректированной длины
+			this.touch_data.x1 = this.touch_data.x0 + v0 * Math.cos(this.Q);
+			this.touch_data.y1 = this.touch_data.y0 + v0 * Math.sin(this.Q);
+
+			guide_line.clear();
+			guide_line.lineStyle(1, 0x00ff00)
+			guide_line.moveTo(this.touch_data.x0, this.touch_data.y0);
+			guide_line.lineTo(this.touch_data.x1, this.touch_data.y1);
+			
+			objects.dir_line.x = objects.player.x+objects.player.width/2;
+			objects.dir_line.y = objects.player.y+40;
+			
+			objects.dir_line.rotation=this.Q;
+
+        }
+
+    },
+
+    up: function () {
+
+        guide_line.visible = objects.dir_line.visible = false;
+
+		if (game.state!=="playing")
+			return;
+		
+        if (drag === 0)
+            return;
+		
+		objects.power_level_cont.visible=false;
+
+        drag = 0;
+		
+		//запускаем локальный снаряд
+        projectiles.add(this.Q,objects.power_slider.scale.x*100+50, objects.enemy,objects.player.projectile.texture);
+		console.log(objects.power_slider.scale.x*100+50);
+		//убираем копье и возвращаем его через некоторое время
+		objects.player.projectile.visible=false;
+		setTimeout(function(){objects.player.projectile.visible=true},500);			
+		
+		//запускаем анимацию
+		skl_anim.activate(0,skl_throw);
+    }
+
+}
+
+var lb={
+	
+	
+	cards_pos: [[370,10],[380,70],[390,130],[380,190],[360,250],[330,310],[290,370]],
+	
+	activate: function() {
+		
+	
+		
+		anim.add_pos({obj:objects.lb_1_cont,param:'x',vis_on_end:true,func:'easeOutBack',val:[-150,'sx'],	speed:0.02});
+		anim.add_pos({obj:objects.lb_2_cont,param:'x',vis_on_end:true,func:'easeOutBack',val:[-150,'sx'],	speed:0.025});
+		anim.add_pos({obj:objects.lb_3_cont,param:'x',vis_on_end:true,func:'easeOutBack',val:[-150,'sx'],	speed:0.03});
+		anim.add_pos({obj:objects.lb_cards_cont,param:'x',vis_on_end:true,func:'easeOutCubic',val:[450,0],	speed:0.03});
+		
+		objects.lb_cards_cont.visible=true;
+		objects.lb_back_button.visible=true;
+		
+		for (let i=0;i<7;i++) {			
+			objects.lb_cards[i].x=this.cards_pos[i][0];
+			objects.lb_cards[i].y=this.cards_pos[i][1];	
+			objects.lb_cards[i].place.text=(i+4)+".";
+			
+		}
+		
+		
+		this.update();
+		
+	},
+	
+	close: function() {
+		
+		
+		objects.lb_1_cont.visible=false;
+		objects.lb_2_cont.visible=false;
+		objects.lb_3_cont.visible=false;
+		objects.lb_cards_cont.visible=false;
+		objects.lb_back_button.visible=false;
+		
+	},
+	
+	back_button_down: function() {
+		
+		if (any_dialog_active===1 || objects.lb_1_cont.ready===false) {
+			game_res.resources.locked.sound.play();
+			return
+		};	
+		
+		
+		//game_res.resources.click.sound.play();		
+		this.close();
+		main_menu.activate();
+		
+	},
+	
+	update: function () {
+		
+		firebase.database().ref("players").orderByChild('rating').limitToLast(25).once('value').then((snapshot) => {
+			
 			if (snapshot.val()===null) {
-				my_data.rating=1400;			  
-				firebase.database().ref("players/"+my_data.uid).set({first_name:my_data.first_name, last_name: my_data.last_name, rating: my_data.rating, pic_url: my_data.pic_url});	
+			  console.log("Что-то не получилось получить данные о рейтингах");
 			}
-			else {
-				my_data.rating=data.rating;
-				//на всякий случай обновляет данные так как могло поменяться имя или фамилия или фото
-				firebase.database().ref("players/"+my_data.uid).set({first_name:my_data.first_name, last_name: my_data.last_name, rating: my_data.rating, pic_url: my_data.pic_url});	
-			}			
-			
-			//и обновляем информацию так как считали рейтинг
-			let trimmed_text=my_data.first_name+" "+my_data.last_name;
-			trimmed_text = trimmed_text.length > 15 ?  trimmed_text.substring(0, 12) + "..." : trimmed_text;
-			objects.player_name_text.text=trimmed_text;	
-			objects.player_rating_text.text=my_data.rating;	
+			else {				
+				
+				var players_array = [];
+				snapshot.forEach(players_data=> {			
+					if (players_data.val().first_name!=="" && players_data.val().first_name!=='')
+						players_array.push([players_data.val().first_name, players_data.val().last_name, players_data.val().rating, players_data.val().pic_url]);	
+				});
+				
+
+				players_array.sort(function(a, b) {	return b[2] - a[2];});
+				
+				
+				//загружаем аватар соперника
+				var loaderOptions = {loadType: PIXI.loaders.Resource.LOAD_TYPE.IMAGE};
+				var loader = new PIXI.Loader();
+								
+				var len=Math.min(10,players_array.length);
+				
+				//загружаем тройку лучших
+				for (let i=0;i<3;i++) {
+					let player_name=players_array[i][0]+" "+players_array[i][1];					
+					player_name = player_name.length > 17 ?  player_name.substring(0, 14) + "..." : player_name;
+					
+					objects['lb_'+(i+1)+'_name'].text=player_name;
+					objects['lb_'+(i+1)+'_rating'].text=players_array[i][2];					
+					loader.add('leaders_avatar_'+i, players_array[i][3],loaderOptions);
+				};
+				
+				//загружаем остальных
+				for (let i=3;i<10;i++) {
+					let player_name=players_array[i][0]+" "+players_array[i][1];					
+					player_name = player_name.length > 18 ?  player_name.substring(0, 15) + "..." : player_name;
+					
+					objects.lb_cards[i-3].name.text=player_name;
+					objects.lb_cards[i-3].rating.text=players_array[i][2];					
+					loader.add('leaders_avatar_'+i, players_array[i][3],loaderOptions);
+				};
+				
+				
+				
+				loader.load((loader, resources) => {
+					for (let i=0;i<3;i++)						
+						objects['lb_'+(i+1)+'_avatar'].texture=resources['leaders_avatar_'+i].texture;
+					
+					for (let i=3;i<10;i++)						
+						objects.lb_cards[i-3].avatar.texture=resources['leaders_avatar_'+i].texture;
+
+				});
+			}
+
 		});
 		
-		
-		//обновляем мой аватар и отображаем мою карточку
-		var loader2 = new PIXI.Loader();
-		loader2.add('my_avatar', my_data.pic_url,{loadType: PIXI.loaders.Resource.LOAD_TYPE.IMAGE});
-		loader2.load((loader, resources) => {
-			objects.my_avatar.texture = resources.my_avatar.texture;
-			
-		});
-		
-
-		//************сетевые манипуляции********************//
-		
-		//записываем что мы в онлайне и простаиваем
-		firebase.database().ref("states/"+my_data.uid).set("online");
-		
-		//обновляем почтовый ящик и подписываемся на новые сообщения
-		firebase.database().ref("inbox/"+my_data.uid).set({sender:"-",message:"-",timestamp:"-",data:{}});
-		firebase.database().ref("inbox/"+my_data.uid).on('value', (snapshot) => { game.process_new_message(snapshot.val());});
-				
-		//подписываемся на изменения состояний пользователей
-		firebase.database().ref("states").on('value', (snapshot) => { game.players_list_updated(snapshot.val());});
-				
-		//отключение от игры
-		firebase.database().ref("states/"+my_data.uid).onDisconnect().set("offline");
-
-
-
-		//запускаем главный цикл
-		main_loop(); 		
-	
 	}
 	
-	function progress(loader, resource) {
+}
+
+function init_game_env() {
+	
 		
-		document.getElementById("m_bar").style.width =  Math.round(loader.progress)+"%";
-	}
+	//загрузка фейковых игроков в базу данных
+	firebase.database().ref("fake_players/player0").set({name:'dsfdsf', pic_url:'', rating:1400});
+		
 	
+    document.getElementById("m_bar").outerHTML = "";
+    document.getElementById("m_progress").outerHTML = "";
+
+	//короткое обращение к ресурсам
+	gres=game_res.resources;
+
+    app = new PIXI.Application({width: M_WIDTH, height: M_HEIGHT, antialias: false, backgroundColor: 0x002200});
+    document.body.appendChild(app.view);
+
+    var resize = function () {
+        const vpw = window.innerWidth; // Width of the viewport
+        const vph = window.innerHeight; // Height of the viewport
+        let nvw; // New game width
+        let nvh; // New game height
+
+        if (vph / vpw < M_HEIGHT / M_WIDTH) {
+            nvh = vph;
+            nvw = (nvh * M_WIDTH) / M_HEIGHT;
+        } else {
+            nvw = vpw;
+            nvh = (nvw * M_HEIGHT) / M_WIDTH;
+        }
+        app.renderer.resize(nvw, nvh);
+        app.stage.scale.set(nvw / M_WIDTH, nvh / M_HEIGHT);
+    }
+
+    resize();
+    window.addEventListener("resize", resize);
+
+    //создаем спрайты и массивы спрайтов и запускаем первую часть кода
+    for (var i = 0; i < load_list.length; i++) {
+        const obj_class = load_list[i][0];
+        const obj_name = load_list[i][1];
+
+        switch (obj_class) {
+        case "sprite":
+            objects[obj_name] = new PIXI.Sprite(game_res.resources[obj_name].texture);
+            eval(load_list[i][2]);
+            break;
+
+        case "block":
+            eval(load_list[i][2]);
+            break;
+
+        case "cont":
+            eval(load_list[i][2]);
+            break;
+
+        case "array":
+			var a_size=load_list[i][2];
+			objects[obj_name]=[];
+			for (var n=0;n<a_size;n++)
+				eval(load_list[i][3]);
+            break;
+        }
+    }
+
+    //обрабатываем вторую часть кода в объектах
+    for (var i = 0; i < load_list.length; i++) {
+        const obj_class = load_list[i][0];
+        const obj_name = load_list[i][1];
+
+        switch (obj_class) {
+        case "sprite":
+            eval(load_list[i][3]);
+            break;
+
+        case "block":
+            eval(load_list[i][3]);
+            break;
+
+        case "cont":
+
+            eval(load_list[i][3]);
+            break;
+
+        case "array":
+			var a_size=load_list[i][2];
+				for (var n=0;n<a_size;n++)
+					eval(load_list[i][4]);	;
+            break;
+        }
+    }
+
+	//загружаем снаряды
+	projectiles.init();
 	
+	//это информация с анимацией
+	skl_lose=JSON.parse(game_res.resources.skl_lose.data);
+	skl_prepare=JSON.parse(game_res.resources.skl_prepare.data);
+	skl_throw=JSON.parse(game_res.resources.skl_throw.data);
 	
+    //загружаем частицы крови
+    particle_engine.load();
+
+    //загружаем данные
+    load_user_data.local();
+
+    //подключаем события нажатия на поле
+    objects.bcg.pointerdown = touch.down.bind(touch);
+    objects.bcg.pointermove = touch.move.bind(touch);
+    objects.bcg.pointerup = touch.up.bind(touch);
+
+    app.stage.addChild(guide_line, guide_line2);
+
+	fp_menu.activate();
+	
+
+	test_sprite=new PIXI.Graphics();
+	//app.stage.addChild(test_sprite);
+	
+
+    //запускаем главный цикл
+    main_loop();
+
+}
+
+function load_resources() {
+
+    game_res = new PIXI.Loader();
+    game_res.add("m2_font", "m_font.fnt");
+
+	//это файл с анимациями который нужно оптимизировать потом
+	game_res.add("skl_prepare", "skl_prepare.txt");
+	game_res.add("skl_throw", "skl_throw.txt");
+	game_res.add("skl_lose", "skl_lose.txt");
+
+    //добавляем из листа загрузки
+    for (var i = 0; i < load_list.length; i++)
+        if (load_list[i][0] == "sprite" || load_list[i][0] == "image")
+            game_res.add(load_list[i][1], "res/" + load_list[i][1] + ".png");
+
+    game_res.load(init_game_env);
+    game_res.onProgress.add(progress);
+
+    function resize_screen() {
+        const vpw = window.innerWidth; // Width of the viewport
+        const vph = window.innerHeight; // Height of the viewport
+        let nvw; // New game width
+        let nvh; // New game height
+
+        if (vph / vpw < M_HEIGHT / M_WIDTH) {
+            nvh = vph;
+            nvw = (nvh * M_WIDTH) / M_HEIGHT;
+        } else {
+            nvw = vpw;
+            nvh = (nvw * M_HEIGHT) / M_WIDTH;
+        }
+        app.renderer.resize(nvw, nvh);
+        app.stage.scale.set(nvw / M_WIDTH, nvh / M_HEIGHT);
+    }
+
+    function progress(loader, resource) {
+
+        document.getElementById("m_bar").style.width = Math.round(loader.progress) + "%";
+    }
+
 }
 
 function main_loop() {
-	
-	
-	projectile.process();	
-	particle_engine.process();
-	
-	process_collisions();
-	
-	//анимируем окно ожидания соперника
-	if (objects.search_opponent_window.visible===true)
-		objects.search_opponent_progress.rotation+=0.1;
-	
-	anim.process();
-    app.render(app.stage);
-	requestAnimationFrame(main_loop);
-	game_tick+=0.01666666;
-}
 
+
+    projectiles.process();
+
+    particle_engine.process();
+
+    process_collisions();
+
+    //обработака окна поиска соперника и не только
+    search_opponent.process();
+	
+
+	
+
+	//обработка моих событий
+	test_sprite.clear();
+	
+	skl_anim.process();
+	objects.player.process();
+	objects.enemy.process();
+
+    //глобальный процессинг
+    g_process();
+
+    anim.process();
+    app.render(app.stage);
+    requestAnimationFrame(main_loop);
+    game_tick += 0.01666666;
+}
 
