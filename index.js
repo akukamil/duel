@@ -1116,15 +1116,19 @@ var fp_menu= {
 	
 	activate : function() {
 		
+		
+		//заполняем базу данных фейковыми игроками
+		firebase.database().ref("fake_players/player0").set({uid:507283181, rating:1400});
+		firebase.database().ref("fake_players/player0").set({uid:623665245, rating:1400});
+		firebase.database().ref("fake_players/player0").set({uid:234918613, rating:1400});
+		firebase.database().ref("fake_players/player0").set({uid:200131962, rating:1400});
+		firebase.database().ref("fake_players/player0").set({uid:375350802, rating:1400});
+		firebase.database().ref("fake_players/player0").set({uid:330875441, rating:1400});
+		firebase.database().ref("fake_players/player0").set({uid:376119283, rating:1400});
+		
+		
 		//++++++++++++++++++++
-		anim.add_pos({
-			obj: objects.fp_cont,
-			param: 'y',
-			vis_on_end: true,
-			func: 'easeOutBack',
-			val: [450, 'sy'],
-			speed: 0.02
-		});
+		anim.add_pos({obj: objects.fp_cont,	param: 'y',	vis_on_end: true,	func: 'easeOutBack',val: [450, 'sy'],speed: 0.02});
 		
 		
 	},
