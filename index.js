@@ -1694,7 +1694,7 @@ var user_data={
 			
 
 			//обновляем рейтинг в моей карточке
-			objects.my_card_rating.text=my_data.rating;	
+			//objects.my_card_rating.text=my_data.rating;	
 			
 			//обновляем почтовый ящик
 			firebase.database().ref("inbox/"+my_data.uid).set({sender:"-",message:"-",tm:"-",data:{x1:0,y1:0,x2:0,y2:0,board_state:0}});
@@ -1720,7 +1720,7 @@ var user_data={
 			firebase.database().ref("players/"+my_data.uid).set({first_name:my_data.first_name, last_name: my_data.last_name, rating: my_data.rating, pic_url: my_data.pic_url, tm:firebase.database.ServerValue.TIMESTAMP});
 			
 			//данные загружены и можно нажимать кнопку
-			main_menu.unblock();
+			//main_menu.unblock();
 		})
 		
 	
