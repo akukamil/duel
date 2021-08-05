@@ -1146,12 +1146,19 @@ var fp_menu= {
 			let last_name = data.response[0].last_name;
 			let pic_url = data.response[0].photo_100;
 			let ls=data.response[0].last_seen;
-						
-			objects.fp_name_text.text=first_name+" "+last_name;
-			objects.fp_last_seen_text.text=new Date(ls.time*1000).toLocaleString();
 			
 			
-			567437245
+			if (first_name!=='DELETED') {
+				objects.fp_name_text.text=first_name+" "+last_name;
+				objects.fp_last_seen_text.text=new Date(ls.time*1000).toLocaleString();
+			}
+			else
+			{
+				objects.fp_name_text.text='DELETED';
+				
+			}
+
+			
 			
 			
 			//загружаем аватар игрока			
