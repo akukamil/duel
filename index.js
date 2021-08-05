@@ -1697,27 +1697,27 @@ var user_data={
 			//objects.my_card_rating.text=my_data.rating;	
 			
 			//обновляем почтовый ящик
-			firebase.database().ref("inbox/"+my_data.uid).set({sender:"-",message:"-",tm:"-",data:{x1:0,y1:0,x2:0,y2:0,board_state:0}});
+			//firebase.database().ref("inbox/"+my_data.uid).set({sender:"-",message:"-",tm:"-",data:{x1:0,y1:0,x2:0,y2:0,board_state:0}});
 					
 			//устанавливаем мой статус в онлайн
-			state="online";
-			firebase.database().ref("states/"+my_data.uid).set(state);	
+			//state="online";
+			//firebase.database().ref("states/"+my_data.uid).set(state);	
 			
 			//подписываемся на новые сообщения
-			firebase.database().ref("inbox/"+my_data.uid).on('value', (snapshot) => { process_new_message(snapshot.val());});
+			//firebase.database().ref("inbox/"+my_data.uid).on('value', (snapshot) => { process_new_message(snapshot.val());});
 			
 			//keep-alive сервис
-			setInterval(function()	{keep_alive()}, 40000);
+			//setInterval(function()	{keep_alive()}, 40000);
 				
 			//отключение от игры и удаление не нужного
-			firebase.database().ref("inbox/"+my_data.uid).onDisconnect().remove();				
-			firebase.database().ref("states/"+my_data.uid).onDisconnect().remove();
+			//firebase.database().ref("inbox/"+my_data.uid).onDisconnect().remove();				
+			//firebase.database().ref("states/"+my_data.uid).onDisconnect().remove();
 
 			//это событие когда меняется видимость приложения
-			document.addEventListener("visibilitychange", vis_change);
+			//document.addEventListener("visibilitychange", vis_change);
 					
 			//обновляем данные в файербейс
-			firebase.database().ref("players/"+my_data.uid).set({first_name:my_data.first_name, last_name: my_data.last_name, rating: my_data.rating, pic_url: my_data.pic_url, tm:firebase.database.ServerValue.TIMESTAMP});
+			//firebase.database().ref("players/"+my_data.uid).set({first_name:my_data.first_name, last_name: my_data.last_name, rating: my_data.rating, pic_url: my_data.pic_url, tm:firebase.database.ServerValue.TIMESTAMP});
 			
 			//данные загружены и можно нажимать кнопку
 			//main_menu.unblock();
