@@ -1631,17 +1631,17 @@ var user_data={
 		}		
 				
 		//если с аватаркой какие-то проблемы то ставим дефолтную
-		if (my_data.pic_url===undefined || my_data.pic_url=="")
-			my_data.pic_url	="https://i.ibb.co/LN0NqZq/ava.jpg";
+		//if (my_data.pic_url===undefined || my_data.pic_url=="")
+		//	my_data.pic_url	="https://i.ibb.co/LN0NqZq/ava.jpg";
 		
 		//загружаем мою аватарку на табло
-		let loader2 = new PIXI.Loader();
-		loader2.add('my_avatar', my_data.pic_url,{loadType: PIXI.loaders.Resource.LOAD_TYPE.IMAGE});
-		loader2.load((loader, resources) => {objects.my_card_avatar.texture = resources.my_avatar.texture;});				
+		//let loader2 = new PIXI.Loader();
+		//loader2.add('my_avatar', my_data.pic_url,{loadType: PIXI.loaders.Resource.LOAD_TYPE.IMAGE});
+		//loader2.load((loader, resources) => {objects.my_card_avatar.texture = resources.my_avatar.texture;});				
 					
 		//Отображаем мое имя и фамилию на табло (хотя его и не видно пока)
-		let t=my_data.first_name;		
-		objects.my_card_name.text=cut_string(t,objects.my_card_name.fontSize,140);					
+		//let t=my_data.first_name;		
+		//objects.my_card_name.text=cut_string(t,objects.my_card_name.fontSize,140);					
 				
 		//загружаем файербейс
 		this.init_firebase();	
