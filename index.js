@@ -1964,10 +1964,21 @@ var lb={
 function init_game_env() {
 	
 		
-	//загрузка фейковых игроков в базу данных
-	firebase.database().ref("fake_players/player0").set({name:'dsfdsf', pic_url:'', rating:1400});
-		
-	
+	//инициируем файербейс
+	if (firebase.apps.length===0) {
+		firebase.initializeApp({
+			apiKey: "AIzaSyCfR6R1M8s1O26Nrd932SZVi02WDT0rUAM",
+			authDomain: "m-duel-eea40.firebaseapp.com",
+			databaseURL: "https://m-duel-eea40-default-rtdb.firebaseio.com",
+			projectId: "m-duel-eea40",
+			storageBucket: "m-duel-eea40.appspot.com",
+			messagingSenderId: "794354546973",
+			appId: "1:794354546973:web:fa3185ada2e69d480609f4",
+			measurementId: "G-XH038NXM3B"
+		});		
+	}
+			
+			
     document.getElementById("m_bar").outerHTML = "";
     document.getElementById("m_progress").outerHTML = "";
 
