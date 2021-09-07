@@ -3047,7 +3047,7 @@ function init_game_env() {
     particle_engine.load();
 
 	//загружаем данные
-    user_data.local();
+    user_data.load();
 
     //подключаем события нажатия на поле
     objects.bcg.pointerdown = touch.down.bind(touch);
