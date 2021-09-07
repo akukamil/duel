@@ -2,18 +2,27 @@ var M_WIDTH = 800, M_HEIGHT = 450;
 var app, game_res, gres, objects = {}, my_data = {}, opp_data = {};
 var g_process = () => {};
 
-var any_dialog_active = 0, net_play = 0, game_platform="";;
+var any_dialog_active = 0, net_play = 0, game_platform="", money_balance = 0;
 
 var guide_line = new PIXI.Graphics();
-var guide_line2 = new PIXI.Graphics();
 var drag = 0, game_tick = 0, state = "";
 var skl_prepare, skl_throw, skl_lose;
 var charge_spd=0.005;
 var test_sprite,fire_sprite;
-var skins_powers=[['s0_',3,0,0,3,0],['bm_',3,0,0,3,10],['bs_',4,1,1,4,20],['ff_',4,1,2,4,30],['gl_',5,2,3,5,40],['sm_',6,3,4,6,50]];
+var skins_powers=[['s0_',3,0,0,2,0,'Stickman'],['gl_',3,1,0,3,50,'Titan'],['ff_',4,2,1,4,60,'Kenshi'],['bs_',4,3,2,5,70,'Parasite'],['sm_',5,3,2,6,80,'Spider-Man'],['ca_',5,4,3,7,90,'Captain America'],['bm_',6,5,4,8,100,'Batman']];
 
 test_mp=[[0,,0,,,,,],[0.02,,5,,,,,],[0.04,,10,,,,,],[0.06,,15,,,,,],[0.08,,20,,,,,],[0.1,,25,,,,,],[0.12,,30,,,,,],[0.14,,35,,,,,],[0.16,,40,,,,,],[0.18,,45,,,,,],[0.2,,50,,,,,],[6,,45,,,,,],[6.02,,40,,,,,],[6.04,,35,,,,,],[6.06,,30,,,,,],[6.08,,25,,,,,],[6.1,,20,,,,,],[6.12,,15,,,,,],[6.14,,10,,,,,],[6.16,,5,,,,,],[6.18,,0,,,,,]]
 
+rnd= Math.random;
+rnd2= function(min,max) {	
+	let r=Math.random() * (max - min) + min
+	return Math.round(r * 100) / 100
+};
+irnd=function(min,max) {	
+    min = Math.ceil(min);
+    max = Math.floor(max);
+    return Math.floor(Math.random() * (max - min + 1)) + min;
+}
 class lb_player_card_class extends PIXI.Container{
 	
 	constructor(x,y,place) {
@@ -281,16 +290,26 @@ class player_class extends PIXI.Container{
 		
 		//это возможности
 		this.powers={'block':3,'freeze':4,'fire':2};
+		this.powers_fire_time=[0,0,0];
 				
 		this.projectile_power='none';
+		
+		//это параметры фейкового игрока
+		this.pref_dev_ang=0; // это диапазон добавочных углов
+		this.dev_ang_error=[]; // -0.3 До 0.3
+		this.idle_time_range=[];
+		this.block_check_dist=0;
+		this.block_prob=0;
+		this.freeze_prob=0;
+		this.fire_prob=0;
+		
+		//это процессинговая функция
+		this.process_func=function(){};
+		this.process_start_time=0;
 		
 		this.skin_id=0;
 		
 		this.name=name;
-		
-		
-		
-		
 		
 		this.zz_spine=new PIXI.Sprite(gres.zz_spine.texture); this.zz_spine.width=40;	this.zz_spine.height=80;	this.zz_spine.anchor.set(0.5,0.5);
 		
@@ -304,6 +323,7 @@ class player_class extends PIXI.Container{
 		this.zz_right_leg1=new PIXI.Sprite(gres.zz_right_leg1.texture);	this.zz_right_leg1.width=40;	this.zz_right_leg1.height=20;	this.zz_right_leg1.anchor.set(0.5,0.5);
 		this.zz_right_leg2=new PIXI.Sprite(gres.zz_right_leg2.texture);	this.zz_right_leg2.width=40;	this.zz_right_leg2.height=20;	this.zz_right_leg2.anchor.set(0.5,0.5);
 		this.zz_projectile=new PIXI.Sprite(gres.zz_projectile.texture);	this.zz_projectile.width=90;	this.zz_projectile.height=20;	this.zz_projectile.anchor.set(0.5,0.5);
+		
 		
 		
 		this.spine=new PIXI.Sprite(); this.spine.width=40;	this.spine.height=80;	this.spine.anchor.set(0.5,0.5);
@@ -329,7 +349,7 @@ class player_class extends PIXI.Container{
 		this.stand.x=-20;
 		this.stand.y=135;		
 		this.stand.width=200;
-		this.stand.height=640;
+		this.stand.height=340;
 		
 		
 		//уровень жизни
@@ -393,20 +413,19 @@ class player_class extends PIXI.Container{
 		this.base_col=JSON.parse(JSON.stringify(col_data));		
 		this.cur_col=JSON.parse(JSON.stringify(col_data));			
 		
-		this.tm=0;
+		
 		this.next_v=100;
-		this.mext_q=0.5;
-		this.next_time=0;
+		this.next_del_q=0.5;
+		this.idle_time=0;
 		
 		this.life_level=100;
 
 	};
 	
-	activate_block() {
-				
+	activate_block() {		
+		gres.orb.sound.play();
 		anim.add_pos({obj: this.block,	param: 'alpha',	vis_on_end: true,	func: 'linear',	val: [0, 1],	speed: 0.1	});		
 		this.block_start=game_tick;
-		
 	}
 	
 	set_projectile_power(t) {
@@ -420,10 +439,9 @@ class player_class extends PIXI.Container{
     shift_height(h_dist) {
         anim.add_pos({obj: this, param: 'y',  vis_on_end: true,  func: 'easeOutBack', val: ['y', this.sy + h_dist], speed: 0.02 });
     };
-	
-	calc_next_fire() {
-		
-		//let v0=this.next_p;
+			
+	calc_next_fire(del_q) {
+
 		let x0 = objects.enemy.x+objects.enemy.width/2;
 		let y0 = objects.enemy.y+50;
 
@@ -433,22 +451,84 @@ class player_class extends PIXI.Container{
 		let dx=x0-x1;
 		let dh=y1-y0;
 		
-		//считаем параметры следующего снаряда
-		let Q1= Math.atan2(dh, dx);					
-		let Q=Q1-0.7;
+		//вычисляем угол между точкой запуском и целью
+		let Q1= Math.atan2(dh, dx);		
+
+		//добавляем еще угол чтобы запуск происходил по дуге
+		let Q=Q1-del_q;
+		
 		let v1=(x0-x1)/Math.cos(Q);
 		let v2=0.5*9.8/(dh-Math.tan(Q)*dx)
 		let v0=v1*Math.sqrt(v2);
-		let dispersion=10;
-		console.log(v0);
-		v0=v0+Math.random()*dispersion-dispersion*0.5;				
-		
+				
 		this.next_q=Q;
 		this.next_v=v0
-		this.next_time=game_tick+v0/30;
 		
 	};
+	
+	calc_next_fire2(v0) {
+
+		v0=v0*33+50;
+		v0>150&&(v0=150);
 		
+		let x0 = objects.enemy.x-80;
+		let y0 = objects.enemy.y+30;
+
+		let x1 = objects.player.x+80;
+		let y1 = objects.player.y+66;
+		
+		let dx=x0-x1;
+		let dh=y1-y0;
+		
+		//решение уравнения взято отсюда https://www.youtube.com/watch?v=32PiZDW40VI
+		let R=dx/v0; R=R*R*4.9;
+		let a=R;
+		let b=dx;
+		let c=R-dh;
+		let D=b * b - (4 * a * c);
+		
+		let Q1=0;
+		
+		if (D>=0){			
+			let root = Math.sqrt(D);			
+			let tanQ1 = (-b + root) / (2 * a);
+			//let tanQ2 = (-b - root) / (2 * a);			
+			Q1=Math.atan(tanQ1);
+		} else {			
+			Q1=-Math.random()
+		}
+		
+		
+		console.log(Q1*180/3.14);
+		this.next_q=Q1;
+		this.next_v=v0
+		
+	};
+			
+	calc_v0_for_Q(del_q) {
+		
+		let x0 = objects.enemy.x-80;
+		let y0 = objects.enemy.y+30;
+
+		let x1 = objects.player.x+80;
+		let y1 = objects.player.y+66;
+		
+		let dx=x0-x1;
+		let dh=y1-y0;
+		
+		//вычисляем угол между точкой запуском и целью
+		let Q1= Math.atan2(dh, dx);		
+
+		//добавляем еще угол чтобы запуск происходил по дуге
+		let Q=Q1-del_q;
+		
+		let v1=(x0-x1)/Math.cos(Q);
+		let v2=0.5*9.8/(dh-Math.tan(Q)*dx)
+		let v0=v1*Math.sqrt(v2);
+				
+		return [Q, v0];		
+	}
+			
 	decrease_life(val) {
 		
 		let new_lev=this.life_level-val;
@@ -480,14 +560,12 @@ class player_class extends PIXI.Container{
 		this.on_fire_start=game_tick;
 		this.fire.play();
 		this.fire.visible=true;
+		this.fire.alpha=1;
+		gres.flame.sound.play();
 		
 	}
-	
-	process() {
-			
 		
-		test_sprite.lineStyle(2, 0xffffff);
-		test_sprite.moveTo(0,0);
+	update_collision() {
 		
 		//обновляем коллизии		
 		for (let i=0;i<this.base_col.length;i++) {
@@ -506,7 +584,6 @@ class player_class extends PIXI.Container{
 				let tx = x * Math.cos(rot) - y * Math.sin(rot);
 				let ty = x * Math.sin(rot) + y * Math.cos(rot);
 
-
 				if (this.scale.x===1) {
 					this.cur_col[i][2][p][0] = this.x+this[ref_name].x+tx;
 					this.cur_col[i][2][p][1] = this.y+this[ref_name].y+ty;					
@@ -519,14 +596,31 @@ class player_class extends PIXI.Container{
 			}; 		
 		}
 		
+		
+	}
+	
+	process_common(init) {
+					
+		if (init===1) {			
+			this.process_start_time=game_tick;		
+			this.process_func=this.process_common;
+			return;
+		}		
+				
+		this.update_collision();
+
 		//обрабатываем данный код только если идет игра
-		if (state!=="playing")
-			return;		
+		if (state!=="playing") return;		
 		
 		//обрабатываем события замороженного игрока
 		if (this.frozen===1) {				
 			if (game_tick-this.frozen_start>5){
 				this.frozen=0;
+				
+				//устанавливаем вид игрока
+				skl_anim.goto_frame(this,skl_throw,0);
+				
+				//восстанавливаем скин
 				this.set_skin_by_id();
 			}
 			return;
@@ -538,7 +632,7 @@ class player_class extends PIXI.Container{
 			this.decrease_life(0.1);
 			if (game_tick-this.on_fire_start>5){
 				this.on_fire=0;				
-				this.fire.visible=false;
+					anim.add_pos({obj:this.fire,param:'alpha',vis_on_end:false,func:'easeOutBack',val:[1,0],	speed:0.02});
 			}
 		};
 		
@@ -551,40 +645,108 @@ class player_class extends PIXI.Container{
 			this.block.rotation+=0.1;
 		}
 				
-		//для оппонента обновляем дополнительные процессы
-		if(this.scale.x===-1) {
-						
-			if (game_tick>this.next_time) {
-								
-				//запускаем локальный снаряд
-				let r_num=~~(Math.random()*3);
-				let p_t='none';
-				
-				if (r_num===1 && this.powers.freeze>0) {					
-					p_t='freeze';
-					this.powers.freeze--;					
-				}
-				
-				if (r_num===2 && this.powers.fire>0) {					
-					p_t='fire';
-					this.powers.fire--;					
-				}
-				
-				projectiles.add(this.next_q,this.next_v, objects.player, objects.enemy.projectile_2.texture, p_t);
-			
-				//сразу просчитываем следующий снаряд
-				this.calc_next_fire();
-			
-				//убираем копье и возвращаем его через некоторое время
-				objects.enemy.projectile.visible=objects.enemy.zz_projectile.visible=false;
-				setTimeout(function(){objects.enemy.projectile.visible=objects.enemy.zz_projectile.visible=true},700);			
-							
-				//запускаем анимацию
-				skl_anim.activate(1,skl_throw);
-				
-
-			}			
+	};
+	
+	process_idle(init) {
+		
+		
+		if (init===1) {			
+			this.process_start_time=game_tick;		
+			this.process_func=this.process_idle;
+			this.idle_time=rnd2(this.idle_time_range[0],this.idle_time_range[1]);
+			return;
 		}
+		
+		//общие функции
+		this.process_common();
+		
+		if (this.frozen===1) return;		
+		
+		//сканируем копья чтобы активировать блок
+		this.scan_projectiles();
+		
+		if (game_tick>this.process_start_time+this.idle_time)
+			this.process_buildup(1);
+
+		
+	
+	};
+	
+	process_buildup(init) {
+		
+		if (init===1) {			
+			this.process_start_time=game_tick;		
+			this.process_func=this.process_buildup;
+			
+			//выбираем угол
+			this.next_del_q=rnd2(this.pref_dev_ang[0],this.pref_dev_ang[1]);
+			
+			return;
+		}
+		
+		
+		//общие функции
+		this.process_common();
+		
+		if (this.frozen===1) return;		
+		
+		//сканируем копья чтобы активировать блок
+		this.scan_projectiles();
+				
+		//считаем сколько силы надо для угла
+		let res=this.calc_v0_for_Q(this.next_del_q);
+		let v0_needed=res[1];
+		let available_power=(game_tick-this.process_start_time)*30+50;
+		
+		
+		//следущий бросок только когда накопим силы для заданного угла		
+		if (available_power>v0_needed) {							
+
+			//запускаем локальный снаряд
+			let p_t='none';			
+			
+			//звук
+			gres.throw.sound.play();		
+
+			let more_targer_for_power_throw=0;
+			
+			let freeze_ok=this.freeze_prob>rnd() && this.powers.freeze>0 && game_tick>this.powers_fire_time[1]+5;
+			if (freeze_ok===true) {					
+				p_t='freeze';
+				this.powers.freeze--;		
+				this.powers_fire_time[1]=game_tick;
+				more_targer_for_power_throw=0.1;
+			}
+			
+			let fire_ok=this.fire_prob>rnd() && this.powers.fire>0 && game_tick>this.powers_fire_time[2]+5;
+			if (fire_ok===true) {					
+				p_t='fire';
+				this.powers.fire--;		
+				this.powers_fire_time[2]=game_tick;
+				more_targer_for_power_throw=0.1;
+			}
+				
+			//добавляем установленную рандомную дельту к углу
+			let error_to_ang=rnd2(this.dev_ang_error[0],this.dev_ang_error[1]);
+			let result_angle_delta=res[0]-error_to_ang;
+
+			console.log(`Ожид: ${this.idle_time} Угол: ${this.next_del_q}  Ошиб: ${error_to_ang} Сила: ${res[1]} `);
+			
+			//запускаем снаряд
+			projectiles.add(result_angle_delta,v0_needed, objects.player, objects.enemy.projectile_2.texture, p_t);
+				
+			//убираем копье и возвращаем его через некоторое время
+			objects.enemy.projectile.visible=objects.enemy.zz_projectile.visible=false;
+			setTimeout(function(){objects.enemy.projectile.visible=objects.enemy.zz_projectile.visible=true},700);			
+						
+			//запускаем анимацию
+			skl_anim.activate(1,skl_throw);
+			
+			//возвращаемся в режим ожидания
+			this.process_idle(1);
+			
+		}			
+		
 	};
 		
 	set_skin_by_id(id) {
@@ -596,7 +758,6 @@ class player_class extends PIXI.Container{
 			this.skin_id=id;
 			skin_prefix=skins_powers[id][0];
 		}
-
 		
 		this.set_skin_by_prefix(skin_prefix);
 		
@@ -619,6 +780,55 @@ class player_class extends PIXI.Container{
 		
 	}
 	
+	scan_projectiles() {
+		
+		if (this.block.visible===true)
+			return;
+		
+		if (this.powers.block<=0)
+			return;
+		
+		//если блокировка не доступка (в ожидании) то просто выходим
+		if (game_tick<this.powers_fire_time[0]+5)
+			return;
+		
+		projectiles.a.forEach((proj)=>{
+			if(proj.on===1) {
+				if (proj.target.name==='enemy') {
+					
+					let bx=proj.target.x-proj.target.block.x;
+					let by=proj.target.y+proj.target.block.y;
+					
+					let dx1=bx-proj.x;
+					let dy1=by-proj.y;
+						
+					let d1=Math.sqrt(dx1*dx1+dy1*dy1);
+												
+					
+					if (d1<this.block_check_dist) {
+						
+						if (this.block_prob>Math.random()) {
+							this.activate_block();		
+							this.powers.block--;
+							this.powers_fire_time[0]=game_tick;		
+							
+						} else {
+							//следующую проверку делаем чуть раньше
+							this.powers_fire_time[0]=game_tick-2;		
+							console.log("block_skipped");
+						}
+					}					
+				}				
+			}
+		})
+		
+	}
+	
+	stop() {
+		
+		this.process_func=this.update_collision;
+	}
+	
 	init() {
 		
 		this.visible=true;
@@ -632,6 +842,7 @@ class player_class extends PIXI.Container{
 		//устанавливаем вид игрока
 		skl_anim.goto_frame(this,skl_throw,0);
 				
+		//устанавливаем начальные значения сил
 		this.set_life(skins_powers[this.skin_id][4]*10);
 		this.powers.block=skins_powers[this.skin_id][1];
 		this.powers.freeze=skins_powers[this.skin_id][2];
@@ -639,13 +850,31 @@ class player_class extends PIXI.Container{
 		
 	}
 	
-	set_life(val) {
-		
+	set_life(val) {		
 		this.life_level=val;
-		this.life_level_front.scale.x=this.life_level*0.01;
-		
+		this.life_level_front.scale.x=this.life_level*0.01;		
 	}
 
+}
+
+var cut_string = function(s,f_size, max_width) {
+	
+	let sum_v=0;
+	for (let i=0;i<s.length;i++) {
+		
+		let code_id=s.charCodeAt(i);
+		let char_obj=game_res.resources.m2_font.bitmapFont.chars[code_id];
+		if (char_obj===undefined) {
+			char_obj=game_res.resources.m2_font.bitmapFont.chars[83];			
+			s = s.substring(0, i) + 'S' + s.substring(i + 1);
+		}		
+
+		sum_v+=char_obj.xAdvance*f_size/64;	
+		if (sum_v>max_width)
+			return s.substring(0,i-1)+"...";		
+	}
+	return s
+	
 }
 
 var search_opponent = {
@@ -653,14 +882,15 @@ var search_opponent = {
 	found_ok: 0,
 	wait_time:0,
 	start_wait_time:0,
+	rating_vs_opponents:[[-99999,1500,0,7],[1600,1700,3,10],[1700,1800,6,13],[1800,1900,9,16],[1900,99999,12,19]],
+
 	
     start: function () {
-
 		
 		//это время когда начали поиска
 		this.start_wait_time=game_tick;		
 		this.found_ok=0;
-		this.wait_time=Math.random()*10+2;
+		this.wait_time=3;//Math.random()*10+2;
 		state="idle";
 
 		//устанавливаем процессинговую функцию
@@ -669,21 +899,41 @@ var search_opponent = {
         //++++++++++++++++++++
         anim.add_pos({obj: objects.search_opponent_window,	param: 'y',	vis_on_end: true,	func: 'easeOutBack',	val: [450, 'sy'],	speed: 0.02});		
 		
-		//выбираем соперника
-		let rnd_id=Math.floor(Math.random()*6);
-		firebase.database().ref("fake_players/player"+rnd_id).once('value').then((snapshot) => {		
+		//выбираем соперника в зависимости от рейтингах
+		let fp_id=0;
+		this.rating_vs_opponents.forEach((it)=>{
+			if (my_data.rating>=it[0] && my_data.rating<it[1]) {				
+				fp_id=irnd(it[2],it[3]);
+			}			
+		})
+		
+		console.log(`выбран игрок с айди ${fp_id}`)
+		
+		firebase.database().ref("players/fp_"+fp_id).once('value').then((snapshot) => {		
 						
 			var data=snapshot.val();
 			opp_data.name=data.name;
+			opp_data.uid='fp_'+fp_id;
 			opp_data.rating=data.rating;
 			opp_data.pic_url=data.pic_url;
+			console.table(data);
+					
 			
+			//загружаем параметры оппонента
+			objects.enemy.pref_dev_ang				=	data.pref_dev_ang;
+			objects.enemy.dev_ang_error				=	data.dev_ang_error;
+			objects.enemy.idle_time_range			=	data.idle_time_range;
+			objects.enemy.block_check_dist			=	data.block_check_dist;
+			objects.enemy.block_prob				=	data.block_prob;
+			objects.enemy.freeze_prob				=	data.freeze_prob;
+			objects.enemy.fire_prob					=	data.fire_prob;
+			objects.enemy.skin_id					=	data.skin_id;
+
 			var loader=new PIXI.Loader();
 			loader.add('opp_avatar', opp_data.pic_url,{loadType: PIXI.loaders.Resource.LOAD_TYPE.IMAGE});
 			loader.load((loader, resources) => {
 				objects.enemy_avatar.texture = resources.opp_avatar.texture;
-				
-				objects.enemy_name_text.text=opp_data.name;
+				objects.enemy_name_text.text=cut_string(opp_data.name,objects.enemy_name_text.fontSize,140);
 				objects.enemy_rating_text.text=opp_data.rating;
 				
 				this.found_ok=1;
@@ -728,10 +978,10 @@ var search_opponent = {
 
         if (objects.search_opponent_window.ready === false)
             return;
+		
+		//проигрываем звук
+		gres.close.sound.play();
 
-		//возвращаем состояния обратно
-        state = "online";
-        firebase.database().ref("states/" + my_data.uid).set(state);
 
         //убриаем окно поиска
         this.hide();
@@ -746,14 +996,7 @@ var search_opponent = {
     hide: function () {
 
         //--------------------
-       anim.add_pos({
-            obj: objects.search_opponent_window,
-            param: 'y',
-            vis_on_end: true,
-            func: 'easeInBack',
-            val: ['sy',450],
-            speed: 0.02
-        });
+       anim.add_pos({  obj: objects.search_opponent_window,  param: 'y',  vis_on_end: true,  func: 'easeInBack',  val: ['sy',450],  speed: 0.02 });
     }
 
 }
@@ -815,8 +1058,9 @@ var projectiles = {
 			this.target = target;
 
 			if (target.name === "player") {
+				
 				this.vx0=-this.vx0;				
-				this.x0 = objects.enemy.x+objects.enemy.width/2;
+				this.x0 = objects.enemy.x-80;
 				this.y0 = objects.enemy.y+30;
 				this.scale.x=1;
 				
@@ -943,7 +1187,6 @@ var projectiles = {
 			
 		}	
 		
-
     },
 	
 	init: function() {
@@ -989,7 +1232,7 @@ var big_message={
 	
 	callback_func: function(){},
 	
-	show: function(text,text2,callback) {
+	show: function(header,text,text2,callback) {
 		
 		any_dialog_active=1;
 		
@@ -1003,6 +1246,8 @@ var big_message={
 			this.callback_func=()=>{};
 		else
 			this.callback_func=callback;
+		
+		objects.big_message_header.text=header;
 
 		objects.big_message_text.text=text;
 		anim.add_pos({obj:objects.big_message_cont,param:'y',vis_on_end:true,func:'easeOutBack',val:[-180, 	'sy'],	speed:0.02});
@@ -1016,7 +1261,7 @@ var big_message={
 		//вызываем коллбэк
 		
 		this.callback_func();
-		//game_res.resources.close.sound.play();
+		gres.close.sound.play();
 		
 		if (objects.big_message_cont.ready===false)
 			return;
@@ -1029,6 +1274,7 @@ var big_message={
 
 var process_collisions=function() {
 
+	//return;
 	projectiles.a.forEach((proj)=>{
 		if(proj.on===1) {
 			
@@ -1049,23 +1295,49 @@ var process_collisions=function() {
 						//останавливаем копье
 						proj.stop(res[0], res[1], proj.target.cur_col[i][2], p);
 						
-						//основной уровн копья
+						//если ударились в дом то просто выходим
+						if (limb_name==='stand') {							
+							gres.hit_wall.sound.play();
+							break;		
+						}
+												
+						
+						//основной уровн копья и звуки
 						let sum_damage=proj.P;
 						
-						if (limb_name==="head")
-							sum_damage=sum_damage*1.5;
-												
-						proj.power==='freeze'&&(proj.target.make_frozen());						
-						proj.power==='fire'&&(proj.target.make_on_fire());
-						
+
+
+
+						if (proj.power==='freeze') {
+							
+							
+							gres.freezed.sound.play();
+							proj.target.make_frozen()
+						}
+											
+						if (proj.power==='fire') {
+							
+							
+							
+							proj.target.make_on_fire()
+						}
+							
+						if (proj.power==='none') {
+							
+							if (limb_name==="head") {
+								sum_damage=sum_damage*1.5;							
+								gres.hit_head.sound.play();
+							} else {								
+								gres.hit0.sound.play();
+							}
+						}
+					
 						
 						//добавляем поток крови и данные объекта с которым она столкнулась
 						particle_engine.add(res[0], res[1], -Math.sign(proj.vx0),sum_damage*0.3, proj.target.cur_col[i][2], p);						
 											
 						//уменьшаем жизнь
 						proj.target.decrease_life(Math.round(sum_damage*0.05));
-						
-						console.log(sum_damage);
 						
 						//показываем хэдшот
 						if (limb_name==="head")						
@@ -1077,7 +1349,7 @@ var process_collisions=function() {
 			//проверяем столкновение с блоками
 			if (proj.target.block.visible===true) {
 				
-				let bx=proj.target.x+proj.target.block.x;
+				let bx=proj.target.x+proj.target.block.x*proj.target.scale.x;
 				let by=proj.target.y+proj.target.block.y;
 				let r=proj.target.block.width*0.5;
 				
@@ -1090,8 +1362,10 @@ var process_collisions=function() {
 				let d1=Math.sqrt(dx1*dx1+dy1*dy1);
 				let d2=Math.sqrt(dx2*dx2+dy2*dy2);
 				
-				if (d1<r || d2<r)
-					proj.stop();
+				if (d1<r || d2<r) {					
+					proj.stop();					
+				}
+
 				
 			}
 			
@@ -1295,6 +1569,13 @@ var anim = {
 
 }
 
+var keep_alive= function() {
+			
+	firebase.database().ref("players/"+my_data.uid+"/tm").set(firebase.database.ServerValue.TIMESTAMP);
+	firebase.database().ref("states/"+my_data.uid).onDisconnect().remove();
+
+}
+
 var mini_process={
 	
 	
@@ -1363,7 +1644,7 @@ var main_menu = {
 	activate : function() {
 		
 		//++++++++++++++++++++
-		anim.add_pos({obj: objects.main_buttons_cont,	param: 'y',	vis_on_end: true,	func: 'easeOutBack',	val: [450, 'sy'],	speed: 0.02	});
+		anim.add_pos({obj: objects.main_buttons_cont,	param: 'x',	vis_on_end: true,	func: 'easeOutCubic',	val: [800, 'sx'],	speed: 0.02	});
 			
 		objects.start_player.visible=true;
 		objects.start_player.init(0);
@@ -1376,7 +1657,7 @@ var main_menu = {
 		objects.sprite_001.visible=true;
 		
 		//устанавливаем фон
-		objects.bcg.texture=game_res.resources["bcg_1"].texture;
+		objects.bcg.texture=game_res.resources["bcg"].texture;
 
 		
 		this.start_time=game_tick;
@@ -1387,11 +1668,15 @@ var main_menu = {
 		
 	},
 	
-	//нажатие на кнопку
 	play_button_down: function() {
 		
-        if (objects.main_buttons_cont.ready === false || any_dialog_active===1)
+        if (objects.main_buttons_cont.ready === false || any_dialog_active===1) {
+			gres.locked.sound.play();
             return;
+		}
+		
+		gres.click.sound.play();
+		
 				
 		//*********выходим из состояния главного меню**********
 		
@@ -1405,8 +1690,12 @@ var main_menu = {
 	
 	lb_button_down: function() {
 		
-        if (objects.main_buttons_cont.ready === false || any_dialog_active===1)
+        if (objects.main_buttons_cont.ready === false || any_dialog_active===1) {
+			gres.locked.sound.play();
             return;
+		}
+		
+		gres.click.sound.play();
 		
 		this.hide();
 		lb.activate();
@@ -1421,8 +1710,8 @@ var main_menu = {
 		
 
 		//------------------------
-		anim.add_pos({obj: objects.main_buttons_cont,param: 'y',vis_on_end: false,func: 'easeInBack',val: ['sy',450],speed: 0.02});
-		anim.add_pos({obj: objects.my_data_cont,param: 'alpha',	vis_on_end: false,	func: 'linear',	val: [1,0],	speed: 0.02	});
+		anim.add_pos({obj: objects.main_buttons_cont,param: 'x',vis_on_end: false,func: 'linear',val: ['sx',800],speed: 0.03});
+		//anim.add_pos({obj: objects.my_data_cont,param: 'alpha',	vis_on_end: false,	func: 'linear',	val: [1,0],	speed: 0.02	});
 		
 	},
 	
@@ -1433,9 +1722,45 @@ var main_menu = {
 	
 	shop_button_down: function() {
 		
+       if (objects.main_buttons_cont.ready === false || any_dialog_active===1) {
+			gres.locked.sound.play();
+            return;
+		}
+		
+		gres.click.sound.play();
+		
 		this.hide();
 		shop.activate();
 		
+		
+	},
+	
+	rules_ok_down: function() {
+		
+		if (objects.rules_cont.ready===false)
+			return;
+		
+		gres.close.sound.play();
+		
+		any_dialog_active=0;
+		
+		anim.add_pos({obj: objects.rules_cont,param: 'y',vis_on_end: false,func: 'easeInBack',val: ['sy',450],speed: 0.04});
+		
+	},
+	
+	rules_button_down: function() {
+		
+		if (objects.rules_cont.ready===false || any_dialog_active===1) {
+			gres.locked.sound.play();
+			return;
+		}
+			
+		
+		any_dialog_active=1;	
+		
+		gres.click.sound.play();
+		
+		anim.add_pos({obj: objects.rules_cont,param: 'y',vis_on_end: true,func: 'easeOutBack',val: [450,'sy'],speed: 0.02});
 		
 	},
 	
@@ -1457,6 +1782,7 @@ var shop={
 	start_time:0,
 	tween_spd: 1,
 	sel_skin: 0,
+	new_buy_time:0,
 	
 	activate: function() {
 		
@@ -1464,6 +1790,7 @@ var shop={
 		objects.shop_player.life_level_frame.visible=false;
 		objects.shop_player.life_level_front.visible=false;
 		objects.shop_player.stand.visible=false;
+
 		
 		objects.shop_player.scale.x=objects.shop_player.scale.y=1.8;
 		objects.shop_player.init();	
@@ -1471,9 +1798,15 @@ var shop={
 		objects.shop_cont.visible=true;
 		objects.bcg.texture=gres.shop_bcg.texture;
 		
+		objects.funny_bcg.visible=false;
+		
+		objects.shop_balance_text.text='Баланс: '+money_balance+'$';
+		
 		//устанавливаем вид и параметры текущего скина
 		this.sel_skin=objects.start_player.skin_id=objects.player.skin_id;
 		this.next_button_down(0);
+		
+		
 		
 		this.start_time=game_tick;
 		
@@ -1487,6 +1820,16 @@ var shop={
 			skl_anim.activate(3,skl_throw);
 			this.start_time=game_tick;
 		}
+		
+		if (objects.funny_bcg.visible===true) {
+			objects.funny_bcg.rotation+=0.02;
+			
+			if (objects.funny_bcg.ready===true)
+				if(game_tick-this.new_buy_time>3)
+					anim.add_pos({obj: objects.funny_bcg,	param: 'alpha',	vis_on_end: false,	func: 'linear',	val: [1, 0],	speed: 0.05	});
+			
+		}
+		
 
 		if (skl_anim.slots[3].on===0)
 			skl_anim.tween(objects.shop_player,skl_prepare,Math.sin(game_tick*this.tween_spd)*0.5+0.5);
@@ -1494,11 +1837,18 @@ var shop={
 	
 	next_button_down: function(v) {
 		
+
+		if (any_dialog_active===1) {
+			gres.locked.sound.play();
+			return;		   
+		}
+		
+		gres.click.sound.play();
+
+		
 		this.sel_skin+=v;
 		this.sel_skin>=(skins_powers.length-1)&&(this.sel_skin=skins_powers.length-1);
 		this.sel_skin===-1&&(this.sel_skin=0)
-		
-		
 		
 		objects.shop_player.set_skin_by_id(this.sel_skin);	
 		
@@ -1506,7 +1856,10 @@ var shop={
 		let freeze=skins_powers[this.sel_skin][2];
 		let fire=skins_powers[this.sel_skin][3];
 		let life=skins_powers[this.sel_skin][4];
+		let price=skins_powers[this.sel_skin][5];
 		
+		objects.shop_price_text.text='Цена: '+price + '$';
+		objects.shop_stickman_name.text=skins_powers[this.sel_skin][6];
 		
 		for (let x=0;x<8;x++)
 			x<blocks? objects.shop_leds[x].visible=true:objects.shop_leds[x].visible=false;
@@ -1523,19 +1876,49 @@ var shop={
 	
 	buy_button_down: function() {
 		
+		if (any_dialog_active===1) {
+			gres.locked.sound.play();
+			return;		   
+		}
+		
+		
+		
+		let price=skins_powers[this.sel_skin][5];
+		if (price>money_balance) {
+			big_message.show('Покупка','Подожди-ка, у тебя не достаточно денег чтобы купить этого персонажа', '-------');
+			return;
+		}
+		
+				
+		gres.upgrade.sound.play();
+				
+		anim.add_pos({obj: objects.funny_bcg,	param: 'alpha',	vis_on_end: true,	func: 'linear',	val: [0, 1],	speed: 0.05	});
+		this.new_buy_time=game_tick;		
+		
+		money_balance-=price;
+		objects.shop_balance_text.text='Баланс: '+money_balance+'$';
+		
 		//присваиваем айди скина
 		objects.player.skin_id=this.sel_skin;
 		
 		
-		big_message.show("Вы купили нового персонажа", ")))");
+		big_message.show('Покупка','Вы купили нового персонажа', ')))');
 		
 	},
 	
 	back_button_down: function() {
 		
+		if (any_dialog_active===1) {
+			gres.locked.sound.play();
+			return;		   
+		}
+		
+		gres.close.sound.play();
+		
+		
 		objects.shop_cont.visible=false;	
 		objects.shop_leds.forEach(e=>{e.visible=false});
-		objects.bcg.texture=gres.bcg_0.texture;
+		//objects.bcg.texture=gres.bcg_0.texture;
 		main_menu.activate();
 		
 	}
@@ -1549,16 +1932,15 @@ var power_buttons = {
 	
 	block_down: function() {
 		
-		if (objects.player.block.visible===true)
-			return;
-				
-		if (objects.player.powers.block<=0)
-			return;
-		
+		if (objects.player.block.visible===true || objects.block_button.ready===false || objects.player.powers.block<=0 || objects.player.frozen===1) {
+			gres.locked.sound.play();
+			return;			
+		}
+	
 		
 		this.rem_time.block=game_tick;
 		
-		//уменьшаем количество
+		//уменьшаем количество и обновляем на табло
 		objects.player.powers.block--;
 		objects.block_text.text=objects.player.powers.block;
 		
@@ -1574,8 +1956,11 @@ var power_buttons = {
 	freeze_down: function() {
 		
 		
-		if (objects.player.powers.freeze<=0)
+		if (objects.player.powers.freeze<=0  || objects.freeze_button.ready===false) {			
+			gres.locked.sound.play();
 			return;
+		}
+			
 		
 		if (this.selected_power==='freeze') {
 			this.selected_power='none';				
@@ -1594,8 +1979,11 @@ var power_buttons = {
 	
 	fire_down: function() {
 		
-		if (objects.player.powers.fire<=0)
+
+		if (objects.player.powers.fire<=0 || objects.fire_button.ready===false) {			
+			gres.locked.sound.play();
 			return;
+		}
 		
 		if (this.selected_power==='fire') {
 			this.selected_power='none';				
@@ -1643,6 +2031,7 @@ var power_buttons = {
 	
 		objects.player.powers.freeze--;
 		objects.freeze_text.text=objects.player.powers.freeze;
+		this.selected_power='none';	
 		
 		//убираем кнопку в ожидаение
 		anim.add_pos({obj: objects.freeze_button,	param: 'y',	vis_on_end: false,	func: 'easeInBack',	val: ['sy', -50],	speed: 0.02});
@@ -1656,6 +2045,7 @@ var power_buttons = {
 		
 		objects.player.powers.fire--;
 		objects.fire_text.text=objects.player.powers.fire;		
+		this.selected_power='none';		
 		
 		//убираем кнопку в ожидаение
 		anim.add_pos({obj: objects.fire_button,	param: 'y',	vis_on_end: false,	func: 'easeInBack',	val: ['sy', -50],	speed: 0.02});
@@ -1675,16 +2065,32 @@ var power_buttons = {
 }
 
 var fp= {
-
 	
+	fp_data:[[0.357,0.666,-0.3,0.4,1,5,304,0.377,0.249,0.13,1],[0.319,0.5,-0.28,0.382,0.98,4.78,300,0.584,0.015,0.319,2],[0.292,0.446,-0.26,0.364,0.96,4.56,334,0.452,0.022,0.217,1],[0.262,0.375,-0.24,0.346,0.94,4.34,318,0.339,0.233,0.25,2],[0.26,0.499,-0.22,0.328,0.92,4.12,334,0.3,0.045,0.464,3],[0.227,0.504,-0.2,0.31,0.9,3.9,307,0.558,0.403,0.44,2],[0.374,0.605,-0.18,0.292,0.88,3.68,350,0.216,0.368,0.379,3],[0.327,0.459,-0.16,0.274,0.86,3.46,275,0.45,0.467,0.45,4],[0.361,0.67,-0.14,0.256,0.84,3.24,311,0.243,0.087,0.066,5],[0.241,0.638,-0.12,0.238,0.82,3.02,267,0.135,0.304,0.097,3],[0.392,0.61,-0.1,0.22,0.8,2.8,318,0.209,0.164,0.208,4],[0.306,0.57,-0.08,0.202,0.78,2.58,310,0.349,0.066,0.302,5],[0.336,0.523,-0.06,0.184,0.76,2.36,319,0.317,0.053,0.401,6],[0.207,0.387,-0.04,0.166,0.74,2.14,284,0.467,0.175,0.294,4],[0.372,0.555,-0.02,0.148,0.72,1.92,298,0.509,0.484,0.404,5],[0.258,0.635,0,0.13,0.7,1.7,319,0.183,0.216,0.097,6],[0.379,0.529,0.02,0.112,0.68,1.48,314,0.122,0.371,0.434,5],[0.364,0.613,0.04,0.094,0.66,1.26,339,0.595,0.215,0.095,6],[0.361,0.5,0.06,0.076,0.64,1.04,287,0.317,0.372,0.315,5],[0.276,0.408,0.08,0.058,0.62,0.819999999999999,291,0.292,0.118,0.08,6]],
+
 	update : function() {		
 		
-		var fake_users={"response":[{"first_name":"Рома","id":507283181,"last_name":"Булькин","can_access_closed":true,"is_closed":false,"photo_100":"https:\/\/sun7-6.userapi.com\/s\/v1\/ig2\/LkRGH-HCSuhPi2ByyrLsRt27a8ML0__vuSPJFl53CiK6lh7Ndg02XUmagQoCNM1pdp0mWk5rR2uqLsnMQUucrCXp.jpg?size=100x0&quality=96&crop=8,0,591,591&ava=1"},{"first_name":"Moona","id":623665245,"last_name":"Fıcherbert","can_access_closed":false,"is_closed":true,"photo_100":"https:\/\/sun7-13.userapi.com\/s\/v1\/ig2\/vsRlANcqq2o6fT3oPFK3FYsy8uCGmZh2NzuJ5rucFJDB7oT4BREYh6SGTzYmXBNBlNZkRSZNGbY4-OWYE8qpcqNq.jpg?size=100x0&quality=96&crop=541,581,1156,1156&ava=1"},{"first_name":"Irina","id":234918613,"last_name":"Fadeeva","can_access_closed":false,"is_closed":true,"photo_100":"https:\/\/sun7-8.userapi.com\/s\/v1\/ig2\/G2rq96n4Wjkv3g4eWhwTaS38qpLgyd4jHnKOpUS77SAJS5BWIRTw8hNEMALWRm1evwzwfuOE4RfksZwuS0m3SBIc.jpg?size=100x0&quality=96&crop=0,459,1333,1333&ava=1"},{"first_name":"Полина","id":200131962,"last_name":"Ермолович","can_access_closed":true,"is_closed":false,"photo_100":"https:\/\/sun7-6.userapi.com\/s\/v1\/ig2\/O6DFyQLmt2zppmG5ooXGZYh4QvQuhER9AqKMmoRP5o8qDSGJRrUS5NWP0cbE1Qkp6MAZ36eSS-T9xHN4BADy1R3Z.jpg?size=100x0&quality=96&crop=60,87,974,974&ava=1"},{"first_name":"Роман","id":375350802,"last_name":"Морозов","can_access_closed":true,"is_closed":false,"photo_100":"https:\/\/sun7-9.userapi.com\/s\/v1\/ig2\/wiwTO-He6NV50qCRPoBOCRGwkcNSnFOOHZC-BpsFg0wNVDZGCCv18FJboInF9Xr7OiX8RYgTG_rszGl90dVaMGAB.jpg?size=100x0&quality=96&crop=394,893,788,788&ava=1"},{"first_name":"Fernando","id":330875441,"last_name":"Sucre","can_access_closed":true,"is_closed":false,"photo_100":"https:\/\/sun7-14.userapi.com\/s\/v1\/ig2\/ybhYg29zIigakUZJsfQq2HGPtmKF9v7ZjxNmO43P8vnpv0gWPN7nOFjYJDh32S3we7xJIEiS6HSq0tiGyCEGHSBT.jpg?size=100x0&quality=96&crop=0,251,900,900&ava=1"},{"first_name":"Алёна","id":376119283,"last_name":"Фатахова","can_access_closed":false,"is_closed":true,"photo_100":"https:\/\/sun7-9.userapi.com\/s\/v1\/ig2\/Sl9czb7DdXfm1ApU6yNxAkxZPUbeUYgMBDicoLdOXd7Xoke2qXJ4ESeaGxEKrLD6manObQLQmOVjz-4VEM-uFJ6M.jpg?size=100x0&quality=96&crop=216,216,1728,1728&ava=1"}]};
-		
+		var fake_users={"response":[{"first_name":"Юлия","id":215777416,"last_name":"Григорьева","can_access_closed":true,"is_closed":false,"photo_100":"https:\/\/sun1-26.userapi.com\/s\/v1\/ig2\/E77rXqiG9CFeGtiKcDt_dZiGNYjWtWPdoZmjGMqmsnuSSB5IUdnmRrpxyP6B_QRxOpxXTA3SonWs_En7s1-HrAv8.jpg?size=100x100&quality=96&crop=117,389,1461,1461&ava=1"},{"first_name":"Алексей","id":46300721,"last_name":"Дубенец","can_access_closed":true,"is_closed":false,"photo_100":"https:\/\/sun1-47.userapi.com\/s\/v1\/ig2\/jvb8zUBXqhV-a7wP9rVerq5y0goqZMKdD-7pzB79240yVd3cP9iXWJC_Z0TrmSciWUknaTfdmpBIZOiBX7gqvy9l.jpg?size=100x100&quality=96&crop=487,142,1776,1776&ava=1"},{"first_name":"Алина","id":316978076,"last_name":"Бондарева","can_access_closed":false,"is_closed":true,"photo_100":"https:\/\/sun1-89.userapi.com\/s\/v1\/ig2\/5T4m8gZXtezV76hbWpLsjXKWD8nUm-JTGfyEyvFIQpR8EtN571mFNCXOGGVQI6pX66S3iTnR6NfnVBg7iQe_HxAc.jpg?size=100x100&quality=96&crop=0,59,750,750&ava=1"},{"first_name":"Артём","id":155808982,"last_name":"Мешкович","can_access_closed":true,"is_closed":false,"photo_100":"https:\/\/sun1-19.userapi.com\/s\/v1\/ig2\/olTduxBh88zCnC7K1GQ3C1zI7XFi9maDI6D-BGcebOl9_64XzpaTifFc5m3y4xsDkSShpg0nFCbViFVVLPCgsKbA.jpg?size=100x100&quality=96&crop=0,0,1079,1079&ava=1"},{"first_name":"Ангелина","id":467877925,"last_name":"Селило","can_access_closed":true,"is_closed":false,"photo_100":"https:\/\/sun1-90.userapi.com\/s\/v1\/ig2\/1BSQCK3oOT1R4xCxfqclpbzN4V8Vo9gNXh40DKlGdZFXx_m0bcQbJxwN0VEXwJTV5S_5WP2HRUGDC8zHe8ng0JTt.jpg?size=100x100&quality=96&crop=0,94,749,749&ava=1"},{"first_name":"Арсений","id":555226645,"last_name":"Выржиковский","can_access_closed":true,"is_closed":false,"photo_100":"https:\/\/sun1-28.userapi.com\/s\/v1\/ig2\/zQjKNo-2H4IdPj0DCf5KL09xDdMZtAVajXUpUc9JqcnCs7ziJ93dVteWyoVaquz1ZcTZc68TKP50D3lTpgY9Uvy1.jpg?size=100x100&quality=96&crop=216,216,1726,1726&ava=1"},{"first_name":"Ангелина","id":510921702,"last_name":"Мельниченко","can_access_closed":true,"is_closed":false,"photo_100":"https:\/\/sun1-83.userapi.com\/s\/v1\/ig2\/rthqoM3oPXrLDWAivCXvbDZDr1_BWM11hXcU1Pv4jZqs4_3ScI-kZbbIfDIk-yA1CiXmTxkGT2sCp2mD25zj4cXU.jpg?size=100x100&quality=96&crop=81,74,587,587&ava=1"},{"first_name":"Александр","id":507308956,"last_name":"Аврамов","can_access_closed":true,"is_closed":false,"photo_100":"https:\/\/sun1-24.userapi.com\/s\/v1\/if1\/4S8o9dNirN3f7Xci5qgeOpHHb9yNZHAK8aRibZ6vw9DRTFhpNWAxFaUafI6ikrazV5ArHjB-.jpg?size=100x100&quality=96&crop=0,478,1204,1204&ava=1"},{"first_name":"Роман","id":275826227,"last_name":"Лапчик","can_access_closed":false,"is_closed":true,"photo_100":"https:\/\/sun1-23.userapi.com\/s\/v1\/ig2\/nDjc4vxuLfpI7OjMqeJKlw5cCROVRqZwV-X0FnqDgU5YTI3Ul0BVsEU4JiMHH0WGi1Y6i5QDYACBlYEXvGCBHHlI.jpg?size=100x100&quality=96&crop=4,0,1723,1723&ava=1"},{"first_name":"Марина","id":238945332,"last_name":"Бобр","can_access_closed":true,"is_closed":false,"photo_100":"https:\/\/sun1-55.userapi.com\/s\/v1\/ig2\/2IwDQtVB18G2PWYj2yMOmIEb_8-VirjnnUSeNdx5IsisKhMqfk2qvoxxbgMJi3is-im2UIPGpQi61wyAOaCMEIib.jpg?size=100x100&quality=96&crop=140,331,653,653&ava=1"},{"first_name":"Тёма","id":216535742,"last_name":"Чирич","can_access_closed":false,"is_closed":true,"photo_100":"https:\/\/sun1-16.userapi.com\/s\/v1\/ig1\/2hrm5NaT4JUUxw2wsam3pdgkUXCMvVoIT0b9GxrYL1KVuOJ2IxnTdog7jmUshF2i4-XnCr4k.jpg?size=100x100&quality=96&crop=79,0,744,744&ava=1"},{"first_name":"Юлия","id":236809322,"last_name":"Мартинович","can_access_closed":false,"is_closed":true,"photo_100":"https:\/\/sun1-16.userapi.com\/s\/v1\/ig2\/D5ro3VPM81drzPWN8L7Z-ccFwwveLtMgs-22cjpqtnnw_jcbzEIFBOKqANGsJzVejJntagND_Kq8bB1jpgrby88J.jpg?size=100x100&quality=96&crop=10,298,1525,1525&ava=1"},{"first_name":"Михаил","id":399744269,"last_name":"Черноштан","can_access_closed":false,"is_closed":true,"photo_100":"https:\/\/sun1-94.userapi.com\/s\/v1\/ig2\/eBn9dfMWvSHiId4g__wCxkYQjVdWiULKtepd9mwdfFu81tLyBiV7d8y-xY_P9QNaXKhp5y2f-wXWJgbanmlQdAzo.jpg?size=100x100&quality=96&crop=201,307,750,750&ava=1"},{"first_name":"Раиса","id":316841708,"last_name":"Афанасьева","can_access_closed":false,"is_closed":true,"photo_100":"https:\/\/sun1-29.userapi.com\/s\/v1\/ig2\/oS8BXkZPy29jT7Vd4qTARQ170WNClPhmWbDmHCk2PmR7cMQIGATEHlDH1RDWOi91fXQ3hFhXiNmJctHjZQxH3mXf.jpg?size=100x100&quality=96&crop=9,81,1982,1982&ava=1"},{"first_name":"Ed","id":391230888,"last_name":"Chashchin","can_access_closed":true,"is_closed":false,"photo_100":"https:\/\/sun1-55.userapi.com\/s\/v1\/ig2\/lQjAguwMl_aE4z7q4orRs5lQAushzHnTzLTXgsf5ByvdPA4ik0EHIE7HO664ghWnnw476vv5jDj8tKpOvpDseNsB.jpg?size=100x100&quality=96&crop=0,7,1620,1620&ava=1"},{"first_name":"Ольга","id":396315182,"last_name":"Иванова","can_access_closed":false,"is_closed":true,"photo_100":"https:\/\/sun1-97.userapi.com\/s\/v1\/ig2\/j8MHS48SoqQRBQMx8nWNldTPDMf5gZQq7pNVk-wFkqH1CHPgAV8wbvie6yHQ-4JbpYflK-IVpsIZacQFK8q0q8Es.jpg?size=100x100&quality=96&crop=3,104,1053,1053&ava=1"},{"first_name":"Слава","id":432495236,"last_name":"Якимов","can_access_closed":false,"is_closed":true,"photo_100":"https:\/\/sun1-30.userapi.com\/s\/v1\/ig2\/dlwDYDTNoD3rh6lEOVZ4VzFri9fyeLpkLc_Ho-3f4NL9A8YssfLnVDU0s0Nump_nHr5QviAPD1up7zuDhi0W82lz.jpg?size=100x100&quality=96&crop=1,196,1438,1438&ava=1"},{"first_name":"Вера","id":367631075,"last_name":"Воробьева","can_access_closed":false,"is_closed":true,"photo_100":"https:\/\/sun1-16.userapi.com\/s\/v1\/ig2\/irLx55PpOGvOBy7hFb692pA9HML8er0iLGlU8ddVs-VsqQbIak-wHmnH73VA8Q6wlyBzbRnGoGmRFC7JBNoyj2CK.jpg?size=100x100&quality=95&crop=0,37,1604,1604&ava=1"},{"first_name":"Максим","id":410621256,"last_name":"Артемчук","can_access_closed":false,"is_closed":true,"photo_100":"https:\/\/sun1-16.userapi.com\/s\/v1\/ig2\/SBsLw2CyToo9LivqaqPXwFyhn6_TA_O2LxSOIPQr0HjI9IoDCsNG1Cp_QZ6Gq_ebzKnB6UMlpsvh4WgFLrfyn2c5.jpg?size=100x100&quality=96&crop=0,165,337,337&ava=1"},{"first_name":"Наталия","id":454682533,"last_name":"Войтович","can_access_closed":true,"is_closed":false,"photo_100":"https:\/\/sun1-88.userapi.com\/s\/v1\/if1\/qA_3Zv8Yg8Z8TfSiW-tBKEuweQOYK_wWKLZNP3EDoIiIvbmcj1udto5xoDOlmodAvVcLoqgs.jpg?size=100x100&quality=96&crop=28,365,1072,1072&ava=1"}]}
 		fake_users=fake_users.response;
 		
 		fake_users.forEach((user,index)=>{			
-			firebase.database().ref("fake_players/player"+index).set({name:user.first_name+' ' +user.last_name, pic_url:user.photo_100, rating:1400});
+					
+			let obj={};
+			obj.name=user.first_name+' ' +user.last_name;
+			obj.pic_url=user.photo_100;
+			obj.rating=1400;
+			obj.fp=1;
+			obj.pref_dev_ang			=	[this.fp_data[index][0],this.fp_data[index][1]];
+			obj.dev_ang_error			=	[this.fp_data[index][2],this.fp_data[index][3]];
+			obj.idle_time_range			=	[this.fp_data[index][4],this.fp_data[index][5]];
+			obj.block_check_dist		=	this.fp_data[index][6];		
+			
+			obj.block_prob				=	this.fp_data[index][7];				
+			obj.freeze_prob				=	this.fp_data[index][8];				
+			obj.fire_prob				=	this.fp_data[index][9];	
+			obj.skin_id					=	this.fp_data[index][10];	
+
+			firebase.database().ref("players/fp_"+index).set(obj);
 		})		
 	}	
 
@@ -1714,29 +2120,38 @@ var game = {
 		//устанавливаем фон
 		objects.bcg.texture=game_res.resources["bcg_1"].texture;
 		
-		//восстанавливаем жизни и количество копий
-		objects.enemy.skin_id=~~(Math.random()*6);
-		
+		//восстанавливаем параметры
 		objects.player.init();
 		objects.enemy.init();
 		
-	
+		//устанавливаем процессинговые функции
+		objects.player.process_common(1);
+		objects.enemy.process_idle(1);
+		
+		//объявление
+		gres.round_start.sound.play();
+			
 		//добаляем кнопки 
 		power_buttons.init();
-	
-					
+						
 		//включаем табло оппонента
 		objects.player_card_cont.visible = true;
 		objects.enemy_card_cont.visible = true;
-		
-		//обновляем мои данные
-		objects.player_avatar.texture=objects.my_data_photo.texture;
-		objects.player_name_text.text=objects.my_data_name.text;
-		objects.player_rating_text.text=objects.my_data_rating.text;
-		
 	
 		this.process_round(1);
     },
+	
+	calc_new_rating(my_rating, opp_rating, res) {
+		
+		var Ea = 1 / (1 + Math.pow(10, ((opp_rating-my_rating)/400)));
+		if (res===1) 
+			return Math.round(16 * (1 - Ea));
+		if (res===0) 
+			return Math.round(16 * (0.5 - Ea));
+		if (res===-1)
+			return Math.round(16 * (0 - Ea));
+		
+	},
 	
 	close: function() {
 		
@@ -1800,7 +2215,7 @@ var game = {
 			skl_anim.activate(0,skl_lose);
 			
 			//завершаем игру
-			this.process_finish_game(1,0);	
+			this.process_finish_game(1,-1);	
 
 			return;
 		}
@@ -1812,10 +2227,7 @@ var game = {
 			
 			//завершаем игру
 			this.process_finish_game(1,1);	
-			
-			//отправляем информацию слейву
-			firebase.database().ref("inbox/" + opp_data.uid).set({sender: my_data.uid,message: "END",timestamp: Date.now(),data: 0 });		
-			
+		
 			return;
 		}			
 		
@@ -1828,7 +2240,6 @@ var game = {
 		
 		if (init === 1) {	
 		
-			state="online";		
 					
 			//останавливаем мои движения
 			stop_my_movements();
@@ -1836,34 +2247,45 @@ var game = {
 		
 			this.p_time=game_tick;
 			
+						
+			//обновляем данные о рейтинге в зависимости от результата игры
+			let my_rating_inc=this.calc_new_rating(my_data.rating,opp_data.rating,res);
+			let my_old_rating=my_data.rating;
+			my_data.rating+=my_rating_inc;
+			opp_data.rating-=my_rating_inc;			
+			firebase.database().ref("players/" + my_data.uid+"/rating").set(my_data.rating);	
+			firebase.database().ref("players/" + opp_data.uid+"/rating").set(opp_data.rating);	
 		
-			if (res===0) {
-				big_message.show("Поражение","Рейтинг: -1\nОпыт: +1");				
-				exp.upgrade(1);
-				my_data.rating-=1;
-				//firebase.database().ref("players/" + my_data.uid+"/rating").set(my_data.rating);	
-				//firebase.database().ref("players/" + my_data.uid+"/exp").set(my_data.exp);	
+			if (res===-1) {
+				big_message.show('Результат','Поражение',`Рейтинг: ${my_old_rating} > ${my_data.rating}`);				
+				gres.lose.sound.play();
 			}
 				
 			if (res===1) {
-				exp.upgrade(3);	
-				my_data.rating+=1;
-				big_message.show("Победа","Рейтинг: +1\nОпыт: +3");					
-				//firebase.database().ref("players/" + my_data.uid+"/rating").set(my_data.rating);	
-				//firebase.database().ref("players/" + my_data.uid+"/exp").set(my_data.exp);	
+				money_balance+=1;
+				big_message.show('Результат','Победа',`Рейтинг: ${my_old_rating} > ${my_data.rating}\nДеньги: +1$`);		
+				gres.win.sound.play();		
 			}	
 	
-			if (res===2)
-				big_message.show("Ничья","!!!");	
+			if (res===0) {
+				big_message.show('Результат','Ничья',`Рейтинг: ${my_old_rating} > ${my_data.rating}`);				
+				gres.lose.sound.play();
+			}
+			
+
+
+			//обновляем рейтинг на табло
+			objects.player_rating_text.text=my_data.rating;	
+
+			//останавливаем процессинг
+			objects.player.stop();
+			objects.enemy.stop();
 			
 			g_process = function(){game.process_finish_game(0)};	
 		}
 		
-		
-
-		
 		//выходим из игры
-		if (game_tick>this.p_time+3)
+		if (game_tick>this.p_time+2)
 			this.close();
 		
 	},
@@ -1880,18 +2302,12 @@ var game = {
 		
 	}
 	
-
-
 }
 
 var stop_my_movements = function () {
 
     guide_line.clear();
-    guide_line2.clear();
-
     guide_line.visible = false;
-    guide_line2.visible = false;
-
     drag = 0;
 }
 
@@ -1928,8 +2344,7 @@ var user_data={
 
 		if (e.detail.type === 'VKWebAppGetUserInfoResult') {
 			
-			my_data.first_name=e.detail.data.first_name;
-			my_data.last_name=e.detail.data.last_name;
+			my_data.name=e.detail.data.first_name + ' ' + e.detail.data.last_name;
 			my_data.uid="vk"+e.detail.data.id;
 			my_data.pic_url=e.detail.data.photo_100;
 			user_data.req_result="ok";	
@@ -2020,16 +2435,15 @@ var user_data={
 				return ysdk.getPlayer();
 			}).then((_player)=>{
 				
-				my_data.first_name 	=	_player.getName();
-				my_data.last_name	=	"";
+				my_data.name 	=	_player.getName();
 				my_data.uid			=	_player.getUniqueID().replace(/\//g, "Z");	
 				my_data.pic_url		=	_player.getPhoto('medium');		
 				
 				console.log(my_data.uid);
 				user_data.req_result='ok';
 								
-				if (my_data.first_name=="" || my_data.first_name=='')
-					my_data.first_name=my_data.uid.substring(0,5);
+				if (my_data.name=="" || my_data.name=='')
+					my_data.name=my_data.uid.substring(0,5);
 				
 			}).catch(err => {		
 				console.log(err);
@@ -2066,8 +2480,7 @@ var user_data={
 						function (data) {
 							if (data.error===undefined) {
 								
-								my_data.first_name=data.response[0].first_name;
-								my_data.last_name=data.response[0].last_name;
+								my_data.name=data.response[0].first_name+' '+data.response[0].last_name;
 								my_data.uid="vk"+data.response[0].id;
 								my_data.pic_url=data.response[0].photo_100;
 								user_data.req_result="ok";	
@@ -2108,10 +2521,8 @@ var user_data={
 
 	local: function() {	
 		
-
 		this.req_result='ok'		
-		my_data.first_name="Дядя"+Math.floor(Math.random()*100);
-		my_data.last_name="Федор";
+		my_data.name="Дядя"+Math.floor(Math.random()*100);
 		my_data.uid="local"+Math.floor(Math.random()*1000);
 		my_data.pic_url="https://www.instagram.com/static/images/homepage/screenshot1.jpg/d6bf0c928b5a.jpg";
 		state="online";		
@@ -2126,7 +2537,7 @@ var user_data={
 		//если не получилось авторизоваться в социальной сети то ищем куки
 		if (user_data.req_result!=="ok") {		
 		
-			big_message.show("Ошибка авторизации. Попробуйте перезапустить игру","(((")
+			big_message.show('Упс...','Ошибка авторизации. Попробуйте перезапустить игру','(((')
 		
 			let c_player_uid=this.read_cookie("pic_url");
 			if (c_player_uid===undefined) {
@@ -2134,36 +2545,33 @@ var user_data={
 				let rnd_names=["Бегемот","Жираф","Зебра","Тигр","Ослик","Мамонт","Слон","Енот","Кролик","Бизон","Пантера"];
 				let rnd_num=Math.floor(Math.random()*rnd_names.length)
 				let rand_uid=Math.floor(Math.random() * 99999);
-				my_data.first_name 	=	rnd_names[rnd_num]+rand_uid;
-				my_data.last_name	=	"";
+				my_data.name 	=	rnd_names[rnd_num]+rand_uid;
 				my_data.rating=1400;
+				my_data.money=0;
 				my_data.uid			=	"u"+rand_uid;	
 				my_data.pic_url		=	"https://i.ibb.co/LN0NqZq/ava.jpg";	
 				document.cookie="corners_player="+	my_data.uid;		
-				document.cookie="first_name="+my_data.first_name;	
+				document.cookie="name="+my_data.name;	
+				document.cookie="money="+my_data.money;	
 				document.cookie="pic_url="+my_data.pic_url;	
 			
 			} else {				
 				my_data.uid=this.read_cookie("corners_player");;	
-				my_data.first_name=this.read_cookie("first_name");
-				my_data.last_name="";
+				my_data.name=this.read_cookie("name");
 				my_data.pic_url=this.read_cookie("pic_url");
+				my_data.money=this.read_cookie("money");
 			}
 		}		
 				
 		//если с аватаркой какие-то проблемы то ставим дефолтную
-		//if (my_data.pic_url===undefined || my_data.pic_url=="")
-		//	my_data.pic_url	="https://i.ibb.co/LN0NqZq/ava.jpg";
+		if (my_data.pic_url===undefined || my_data.pic_url=="")
+			my_data.pic_url	="https://i.ibb.co/LN0NqZq/ava.jpg";
 		
-		//загружаем мою аватарку на табло
-		//let loader2 = new PIXI.Loader();
-		//loader2.add('my_avatar', my_data.pic_url,{loadType: PIXI.loaders.Resource.LOAD_TYPE.IMAGE});
-		//loader2.load((loader, resources) => {objects.my_card_avatar.texture = resources.my_avatar.texture;});				
+		//загружаем мою аватарку на табло хотя его пока не видно
+		let loader2 = new PIXI.Loader();
+		loader2.add('my_avatar', my_data.pic_url,{loadType: PIXI.loaders.Resource.LOAD_TYPE.IMAGE});
+		loader2.load((loader, resources) => {objects.player_avatar.texture = resources.my_avatar.texture;});				
 					
-		//Отображаем мое имя и фамилию на табло (хотя его и не видно пока)
-		//let t=my_data.first_name;		
-		//objects.my_card_name.text=cut_string(t,objects.my_card_name.fontSize,140);					
-				
 		//загружаем файербейс
 		this.init_firebase();	
 	
@@ -2179,10 +2587,12 @@ var user_data={
 			if (data===null) {
 				//если я первый раз в  игре
 				my_data.rating=1400;	
+				my_data.money=0;
 			}
 			else {
 				//если база данных вернула данные то все равно проверяем корректность ответа
 				my_data.rating = data.rating || 1400;
+				my_data.money=data.money || 0;
 			}			
 
 		}).catch((error) => {	
@@ -2191,54 +2601,42 @@ var user_data={
 			
 			
 			//сделаем сдесь защиту от неопределенности
-			if (my_data.rating===undefined || my_data.first_name===undefined) {
-				big_message.show("Не получилось загрузить Ваши данные. Попробуйте перезапустить игру","(((")
+			if (my_data.rating===undefined || my_data.name===undefined) {
+				big_message.show('Упс..','Не получилось загрузить Ваши данные. Попробуйте перезапустить игру','(((')
 				
 				
 				let keep_id=my_data.uid;
 				if (my_data.rating===undefined)
 					my_data.uid="re_"+keep_id;
 				
-				if (my_data.first_name===undefined)
-					my_data.uid="ne_"+keep_id;
+				if (my_data.name===undefined)
+					my_data.name="ne_"+keep_id;
 				
 				if (my_data.rating===undefined && my_data.first_name===undefined)
 					my_data.uid="nre_"+keep_id;
 				
 				my_data.rating=1400;
-				my_data.first_name=my_data.first_name || "Игрок";
-				my_data.last_name=my_data.last_name || "_";			
+				my_data.money=0;
+				my_data.name=my_data.name || "Игрок";
+	
 			}
-			
-			
-			
-			
 
-			//обновляем рейтинг в моей карточке
-			//objects.my_card_rating.text=my_data.rating;	
+			//обновляем рейтинг и имя в моей карточке
+			objects.player_rating_text.text=my_data.rating;	
+			objects.player_name_text.text=cut_string(my_data.name,objects.player_name_text.fontSize,140);		
 			
-			//обновляем почтовый ящик
-			//firebase.database().ref("inbox/"+my_data.uid).set({sender:"-",message:"-",tm:"-",data:{x1:0,y1:0,x2:0,y2:0,board_state:0}});
-					
-			//устанавливаем мой статус в онлайн
-			//state="online";
-			//firebase.database().ref("states/"+my_data.uid).set(state);	
-			
-			//подписываемся на новые сообщения
-			//firebase.database().ref("inbox/"+my_data.uid).on('value', (snapshot) => { process_new_message(snapshot.val());});
+			//обновляем данные в перечне игроков
+			firebase.database().ref("players/"+my_data.uid+"/tm").set(firebase.database.ServerValue.TIMESTAMP);
 			
 			//keep-alive сервис
-			//setInterval(function()	{keep_alive()}, 40000);
+			setInterval(function()	{keep_alive()}, 40000);
 				
-			//отключение от игры и удаление не нужного
-			//firebase.database().ref("inbox/"+my_data.uid).onDisconnect().remove();				
-			//firebase.database().ref("states/"+my_data.uid).onDisconnect().remove();
 
 			//это событие когда меняется видимость приложения
 			//document.addEventListener("visibilitychange", vis_change);
 					
 			//обновляем данные в файербейс
-			//firebase.database().ref("players/"+my_data.uid).set({first_name:my_data.first_name, last_name: my_data.last_name, rating: my_data.rating, pic_url: my_data.pic_url, tm:firebase.database.ServerValue.TIMESTAMP});
+			firebase.database().ref("players/"+my_data.uid).set({name:my_data.name, rating: my_data.rating,money: my_data.money, pic_url: my_data.pic_url, fp:0, tm:firebase.database.ServerValue.TIMESTAMP});
 			
 			//данные загружены и можно нажимать кнопку
 			//main_menu.unblock();
@@ -2269,6 +2667,7 @@ var exp= {
 var touch = {
 
 	Q:0,
+	moved:0,
 
 	touch_data : {
 		x0: 0,
@@ -2338,7 +2737,9 @@ var touch = {
 			let dyv=-Math.cos(objects.player.spine.rotation);			
 			objects.dir_line.x = objects.player.x+objects.player.spine.x+dxv*30;
 			objects.dir_line.y = objects.player.y+objects.player.spine.y+dyv*30;
-					
+			
+			//это значит что движение произведено
+			this.moved=1;
 			
 			objects.dir_line.rotation=this.Q;
 
@@ -2359,24 +2760,30 @@ var touch = {
         if (drag === 0)
             return;
 		
-
+		//если только движение произошло
+		if (this.moved===0)
+			return;
+		this.moved=0;
+		
         drag = 0;
 		
 		//запускаем локальный снаряд
         projectiles.add(this.Q,objects.power_slider.scale.x*100+50, objects.enemy,objects.player.projectile_2.texture, objects.player.projectile_power);
 		
+						
+		//звук
+		gres.throw.sound.play();
+		
 		//сообщаем что отрправлен мощный снаряд
 		objects.player.projectile_power==='freeze'&&(power_buttons.freeze_fired());
 		objects.player.projectile_power==='fire'&&(power_buttons.fire_fired());
-
 		
 		//убираем выделение
 		objects.upg_button_frame.visible=false;
 		objects.player.projectile_power='none';
-		
 
 		//убираем текстуры копья
-		objects.player.projectile_bcg.texture=null;
+		//objects.player.projectile_bcg.texture=null;
 		
 		//убираем копье и возвращаем его через некоторое время
 		objects.player.projectile.visible=false;
@@ -2434,6 +2841,8 @@ var lb={
 		objects.lb_cards_cont.visible=false;
 		objects.lb_back_button.visible=false;
 		
+		gres.close.sound.play();
+		
 	},
 	
 	back_button_down: function() {
@@ -2461,12 +2870,12 @@ var lb={
 				
 				var players_array = [];
 				snapshot.forEach(players_data=> {			
-					if (players_data.val().first_name!=="" && players_data.val().first_name!=='')
-						players_array.push([players_data.val().first_name, players_data.val().last_name, players_data.val().rating, players_data.val().pic_url]);	
+					if (players_data.val().name!=="" && players_data.val().name!=='')
+						players_array.push([players_data.val().name, players_data.val().rating, players_data.val().pic_url]);	
 				});
 				
 
-				players_array.sort(function(a, b) {	return b[2] - a[2];});
+				players_array.sort(function(a, b) {	return b[1] - a[1];});
 				
 				
 				//загружаем аватар соперника
@@ -2477,22 +2886,25 @@ var lb={
 				
 				//загружаем тройку лучших
 				for (let i=0;i<3;i++) {
-					let player_name=players_array[i][0]+" "+players_array[i][1];					
-					player_name = player_name.length > 17 ?  player_name.substring(0, 14) + "..." : player_name;
+					let fname=players_array[i][0];					
+					fname = cut_string(fname,objects['lb_1_name'].fontSize,180);
 					
-					objects['lb_'+(i+1)+'_name'].text=player_name;
-					objects['lb_'+(i+1)+'_rating'].text=players_array[i][2];					
-					loader.add('leaders_avatar_'+i, players_array[i][3],loaderOptions);
+					objects['lb_'+(i+1)+'_name'].text=fname;
+					objects['lb_'+(i+1)+'_rating'].text=players_array[i][1];					
+					loader.add('leaders_avatar_'+i, players_array[i][2],loaderOptions);
 				};
 				
 				//загружаем остальных
 				for (let i=3;i<10;i++) {
-					let player_name=players_array[i][0]+" "+players_array[i][1];					
-					player_name = player_name.length > 18 ?  player_name.substring(0, 15) + "..." : player_name;
+					let fname=players_array[i][0];	
+					objects.lb_cards[i-3].full_name=fname;
 					
-					objects.lb_cards[i-3].name.text=player_name;
-					objects.lb_cards[i-3].rating.text=players_array[i][2];					
-					loader.add('leaders_avatar_'+i, players_array[i][3],loaderOptions);
+					fname = cut_string(fname,objects.lb_cards[i-3].name.fontSize,180);
+					
+					objects.lb_cards[i-3].name.text=fname;
+					objects.lb_cards[i-3].rating.text=players_array[i][1];					
+					loader.add('leaders_avatar_'+i, players_array[i][2],loaderOptions);					
+					
 				};
 				
 				
@@ -2601,9 +3013,9 @@ function init_game_env() {
             eval(load_list[i][3]);
             break;
 
-        case "cont":
-
-            eval(load_list[i][3]);
+        case "cont":	
+		
+	        eval(load_list[i][3]);
             break;
 
         case "array":
@@ -2633,10 +3045,10 @@ function init_game_env() {
     objects.bcg.pointermove = touch.move.bind(touch);
     objects.bcg.pointerup = touch.up.bind(touch);
 
-    app.stage.addChild(guide_line, guide_line2);
 
 	//добавить фейковых игроков в базу данных
-	fp.update();
+	//fp.update();
+	
 	
 	main_menu.activate();
 	test_sprite=new PIXI.Graphics();
@@ -2651,21 +3063,48 @@ function init_game_env() {
 function load_resources() {
 
     game_res = new PIXI.Loader();
-    game_res.add("m2_font", "m_font.fnt");
+	
+	
+	//let git_src="https://akukamil.github.io/corners/"
+	let git_src=""
+	
+	
+	game_res.add('receive_move',git_src+'sounds/receive_move.mp3');
+	game_res.add('note',git_src+'sounds/note.mp3');
+	game_res.add('receive_sticker',git_src+'sounds/receive_sticker.mp3');
+	game_res.add('message',git_src+'sounds/message.mp3');
+	game_res.add('lose',git_src+'sounds/lose.mp3');
+	game_res.add('win',git_src+'sounds/win.mp3');
+	game_res.add('click',git_src+'sounds/click.mp3');
+	game_res.add('close',git_src+'sounds/close.mp3');
+	game_res.add('move',git_src+'sounds/move.mp3');
+	game_res.add('locked',git_src+'sounds/locked.mp3');
+	game_res.add('clock',git_src+'sounds/clock.mp3');
+	game_res.add('throw',git_src+'sounds/throw.mp3');
+	game_res.add('hit0',git_src+'sounds/hit0.mp3');
+	game_res.add('hit_wall',git_src+'sounds/hit_wall.mp3');
+	game_res.add('hit_head',git_src+'sounds/hit_head.mp3');
+	game_res.add('flame',git_src+'sounds/flame.mp3');
+	game_res.add('freezed',git_src+'sounds/freezed.mp3');
+	game_res.add('round_start',git_src+'sounds/round_start.mp3');
+	game_res.add('orb',git_src+'sounds/orb.mp3');
+	game_res.add('upgrade',git_src+'sounds/upgrade.mp3');
+	
+    game_res.add("m2_font", git_src+"m_font.fnt");
 
 	//это файл с анимациями который нужно оптимизировать потом
-	game_res.add("skl_prepare", "skl_prepare.txt");
-	game_res.add("skl_throw", "skl_throw.txt");
-	game_res.add("skl_lose", "skl_lose.txt");
+	game_res.add("skl_prepare", git_src+"skl_prepare.txt");
+	game_res.add("skl_throw", git_src+"skl_throw.txt");
+	game_res.add("skl_lose", git_src+"skl_lose.txt");
 
     //добавляем из листа загрузки
     for (var i = 0; i < load_list.length; i++)
         if (load_list[i][0] == "sprite" || load_list[i][0] == "image")
-            game_res.add(load_list[i][1], "res/" + load_list[i][1] + ".png");
+            game_res.add(load_list[i][1], git_src+"res/" + load_list[i][1] + ".png");
 		
 	//добавляем огонь
 	for (var i = 0; i < 32; i++)
-		game_res.add("fire"+i, "res/fire/image_part_0"+(i+1)+ ".png");
+		game_res.add("fire"+i, git_src+"res/fire/image_part_0"+(i+1)+ ".png");
 
     game_res.load(init_game_env);
     game_res.onProgress.add(progress);
@@ -2702,27 +3141,22 @@ function main_loop() {
     particle_engine.process();
 
     process_collisions();
-
-    //обработака окна поиска соперника и не только
-    search_opponent.process();
 	
-
 	power_buttons.process();
 
 	//обработка моих событий
 	test_sprite.clear();
 	
 	skl_anim.process();
-	objects.player.process();
-	objects.enemy.process();
+	objects.player.process_func();
+	objects.enemy.process_func();
 
     //глобальный процессинг
     g_process();
 
     anim.process();
-	//mini_process.process();
 	
-    app.render(app.stage);
+    //app.render(app.stage);
     requestAnimationFrame(main_loop);
     game_tick += 0.01666666;
 }
