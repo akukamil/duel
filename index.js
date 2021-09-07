@@ -2,15 +2,17 @@ var M_WIDTH = 800, M_HEIGHT = 450;
 var app, game_res, gres, objects = {}, my_data = {}, opp_data = {};
 var g_process = () => {};
 
-var any_dialog_active = 0, net_play = 0;
+var any_dialog_active = 0, net_play = 0, game_platform="";;
 
 var guide_line = new PIXI.Graphics();
 var guide_line2 = new PIXI.Graphics();
 var drag = 0, game_tick = 0, state = "";
 var skl_prepare, skl_throw, skl_lose;
 var charge_spd=0.005;
-var test_sprite;
-var load_list=[["image","bcg_0",""],["block","bcg","objects[obj_name]=new PIXI.Sprite();objects[obj_name].x=-10;objects[obj_name].y=-10;objects[obj_name].interactive=true;","objects[obj_name].texture=gres.bcg_0.texture;app.stage.addChild(objects[obj_name]);"],["block","player_name_text","objects[obj_name]=new PIXI.BitmapText('', {font: '27px Century Gothic',align: 'center'});objects[obj_name].anchor.set(0,0);objects[obj_name].x=130;objects[obj_name].y=25;objects[obj_name].base_tint=objects[obj_name].tint=0X333F50;",""],["cont","player_name_cont","objects[obj_name]=new PIXI.Container();objects[obj_name].visible=false;objects[obj_name].sx=objects[obj_name].x=-20;objects[obj_name].sy=objects[obj_name].y=-25;","app.stage.addChild(objects[obj_name]);objects[obj_name].addChild(objects.player_name_text);objects[obj_name].addChild(objects.player_rating_text);objects[obj_name].addChild(objects.my_avatar);"],["block","my_avatar","objects[obj_name]=new PIXI.Sprite();objects[obj_name].sx=objects[obj_name].x=30;objects[obj_name].sy=objects[obj_name].y=35;objects[obj_name].width=90;objects[obj_name].height=80;",""],["block","player_rating_text","objects[obj_name]=new PIXI.BitmapText('', {font: '25px Century Gothic',align: 'center'});objects[obj_name].anchor.set(0.5,0);objects[obj_name].x=75;objects[obj_name].y=115;objects[obj_name].base_tint=objects[obj_name].tint=0X385723;",""],["block","opponent_name_text","objects[obj_name]=new PIXI.BitmapText('', {font: '27px Century Gothic',align: 'center'});objects[obj_name].anchor.set(1,0);objects[obj_name].x=130;objects[obj_name].y=20;objects[obj_name].base_tint=objects[obj_name].tint=0X333F50;",""],["cont","opponent_name_cont","objects[obj_name]=new PIXI.Container();objects[obj_name].visible=false;objects[obj_name].sx=objects[obj_name].x=560;objects[obj_name].sy=objects[obj_name].y=-20;objects[obj_name].show=function(){this.children.forEach(c=>{c.alpha=1;c.visible=true})};","app.stage.addChild(objects[obj_name]);objects[obj_name].addChild(objects.opponent_name_text);objects[obj_name].addChild(objects.opponent_rating_text);objects[obj_name].addChild(objects.opponent_avatar);"],["block","opponent_avatar","objects[obj_name]=new PIXI.Sprite();objects[obj_name].sx=objects[obj_name].x=140;objects[obj_name].sy=objects[obj_name].y=30;objects[obj_name].width=90;objects[obj_name].height=80;",""],["block","opponent_rating_text","objects[obj_name]=new PIXI.BitmapText('', {font: '25px Century Gothic',align: 'center'});objects[obj_name].anchor.set(0.5,0);objects[obj_name].x=185;objects[obj_name].y=110;objects[obj_name].base_tint=objects[obj_name].tint=0X385723;",""],["block","online_users_text","objects[obj_name]=new PIXI.BitmapText('', {font: '25px Century Gothic'});objects[obj_name].anchor.set(0,0.5);objects[obj_name].x=10;objects[obj_name].y=420;objects[obj_name].base_tint=objects[obj_name].tint=0XFF0000;","app.stage.addChild(objects[obj_name]);"],["cont","search_opponent_window","objects[obj_name]=new PIXI.Container();objects[obj_name].visible=false;objects[obj_name].sx=objects[obj_name].x=200;objects[obj_name].sy=objects[obj_name].y=60;objects[obj_name].show=function(){this.children.forEach(c=>{c.alpha=1;c.tint=c.base_tint})};","app.stage.addChild(objects[obj_name]);objects[obj_name].addChild(objects.search_opponent_bcg);objects[obj_name].addChild(objects.search_opponent_progress);objects[obj_name].addChild(objects.search_window_close);"],["sprite","search_opponent_bcg","objects[obj_name].x=10;objects[obj_name].y=10;objects[obj_name].base_tint=objects[obj_name].tint;",""],["sprite","search_window_close","objects[obj_name].buttonMode=true;objects[obj_name].interactive=true;objects[obj_name].pointerdown=function(){search_opponent.cancel()};objects[obj_name].x=316;objects[obj_name].y=30;objects[obj_name].base_tint=objects[obj_name].tint;","objects[obj_name].pointerover=function(){this.tint=0xff0000};objects[obj_name].pointerout=function(){this.tint=0xffffff};"],["sprite","search_opponent_progress","objects[obj_name].anchor.set(0.5,0.5);objects[obj_name].x=195;objects[obj_name].y=200;",""],["image","stand",""],["block","headshot","objects[obj_name]=new PIXI.Sprite();objects[obj_name].width=130;objects[obj_name].height=110;objects[obj_name].y=130;objects[obj_name].visible=false;","objects[obj_name].texture=game_res.resources['headshot'].texture;app.stage.addChild(objects[obj_name]);"],["image","bcg_1",""],["image","life_level_bcg",""],["image","life_level_front",""],["image","life_level_frame",""],["image","headshot",""],["sprite","sprite_001","objects[obj_name].x=210;objects[obj_name].y=10;objects[obj_name].base_tint=objects[obj_name].tint;","app.stage.addChild(objects[obj_name]);"],["sprite","my_data_bcg","objects[obj_name].x=10;objects[obj_name].y=10;",""],["block","my_data_photo","objects[obj_name]=new PIXI.Sprite();objects[obj_name].sx=objects[obj_name].x=20;objects[obj_name].sy=objects[obj_name].y=20;objects[obj_name].width=40;objects[obj_name].height=40;",""],["block","my_data_name","objects[obj_name]=new PIXI.BitmapText('', {font: '30px Century Gothic',align: 'center'});objects[obj_name].anchor.set(0.5,0);objects[obj_name].x=150;objects[obj_name].y=20;",""],["block","my_data_rating","objects[obj_name]=new PIXI.BitmapText('', {font: '30px Century Gothic',align: 'center'});objects[obj_name].anchor.set(0.5,0);objects[obj_name].x=150;objects[obj_name].y=40;objects[obj_name].base_tint=objects[obj_name].tint=0X000000;",""],["cont","my_data_cont","objects[obj_name]=new PIXI.Container();objects[obj_name].visible=false;objects[obj_name].sx=objects[obj_name].x=280;objects[obj_name].sy=objects[obj_name].y=-16;","objects[obj_name].addChild(objects.my_data_bcg);objects[obj_name].addChild(objects.my_data_photo);objects[obj_name].addChild(objects.my_data_name);objects[obj_name].addChild(objects.my_data_rating);app.stage.addChild(objects[obj_name]);"],["sprite","dir_line","objects[obj_name].x=20;objects[obj_name].y=300;objects[obj_name].visible=false;objects[obj_name].anchor.set(0,0.5);","app.stage.addChild(objects[obj_name]);"],["image","dir_line2",""],["cont","power_level_cont","objects[obj_name]=new PIXI.Container();objects[obj_name].visible=false;objects[obj_name].ready=true;objects[obj_name].sx=objects[obj_name].x=250;objects[obj_name].sy=objects[obj_name].y=100;","app.stage.addChild(objects[obj_name]);objects[obj_name].addChild(objects.power_slider);objects[obj_name].addChild(objects.power_bcg);"],["sprite","power_slider","objects[obj_name].x=objects[obj_name].sx=20;objects[obj_name].y=objects[obj_name].sy=20;",""],["sprite","power_bcg","objects[obj_name].x=objects[obj_name].sx=10;objects[obj_name].y=objects[obj_name].sy=10;",""],["block","power_level_text","objects[obj_name]=new PIXI.BitmapText('100%', {font: '35px Century Gothic',align: 'center'});objects[obj_name].x=120;objects[obj_name].y=40;objects[obj_name].anchor.set(0.5,0.5);",""],["sprite","play_button","objects[obj_name].x=10;objects[obj_name].y=10;objects[obj_name].base_tint=objects[obj_name].tint;objects[obj_name].buttonMode=true;objects[obj_name].interactive=true;objects[obj_name].pointerdown=function(){main_menu.play_button_down()};objects[obj_name].pointerover=function(){this.tint=0x55ffff};objects[obj_name].pointerout=function(){this.tint=this.base_tint};",""],["sprite","lb_button","objects[obj_name].x=150;objects[obj_name].y=10;objects[obj_name].buttonMode=true;objects[obj_name].interactive=true;objects[obj_name].pointerdown=function(){main_menu.lb_button_down()};objects[obj_name].pointerover=function(){this.tint=0x55ffff};objects[obj_name].pointerout=function(){this.tint=this.base_tint};objects[obj_name].base_tint=objects[obj_name].tint;",""],["sprite","rules_button","objects[obj_name].x=290;objects[obj_name].y=10;objects[obj_name].base_tint=objects[obj_name].tint;objects[obj_name].buttonMode=true;objects[obj_name].interactive=true;objects[obj_name].pointerdown=function(){main_menu.rules_button_down()};objects[obj_name].pointerover=function(){this.tint=0x55ffff};objects[obj_name].pointerout=function(){this.tint=this.base_tint};",""],["cont","main_buttons_cont","objects[obj_name]=new PIXI.Container();objects[obj_name].visible=false;objects[obj_name].sx=objects[obj_name].x=190;objects[obj_name].sy=objects[obj_name].y=240;","objects[obj_name].addChild(objects.play_button);objects[obj_name].addChild(objects.lb_button);objects[obj_name].addChild(objects.rules_button);app.stage.addChild(objects[obj_name]);"],["image","lb_bcg",""],["image","lb_player_card_bcg",""],["block","lb_cards_cont","objects[obj_name]=new PIXI.Container();objects[obj_name].visible=false;objects[obj_name].sx=0;","for (let i=0;i<7;i++)objects[obj_name].addChild(objects.lb_cards[i]);app.stage.addChild(objects[obj_name]);"],["array","lb_cards",7,"var num=n;objects[obj_name][num]=new lb_player_card_class(0,0,num+4);",""],["block","lb_back_button","objects[obj_name]=new PIXI.Sprite();objects[obj_name].x=700;objects[obj_name].y=320;objects[obj_name].visible=false;objects[obj_name].base_tint=objects[obj_name].tint;objects[obj_name].buttonMode=true;objects[obj_name].interactive=true;objects[obj_name].pointerdown=function(){lb.back_button_down()};objects[obj_name].pointerover=function(){this.tint=0x55ffff};objects[obj_name].pointerout=function(){this.tint=this.base_tint};","objects[obj_name].texture=objects.back_button.texture;app.stage.addChild(objects[obj_name]);"],["block","lb_1_avatar","objects[obj_name]=new PIXI.Sprite();objects[obj_name].sx=objects[obj_name].x=10;objects[obj_name].sy=objects[obj_name].y=50;objects[obj_name].width=170;objects[obj_name].height=170;","objects[obj_name].mask=objects.lb_1_mask;"],["sprite","lb_1_mask","objects[obj_name].x=10;objects[obj_name].y=50;",""],["cont","lb_1_cont","objects[obj_name]=new PIXI.Container();objects[obj_name].visible=false;objects[obj_name].sx=objects[obj_name].x=10;objects[obj_name].sy=objects[obj_name].y=1480-1510+40;","objects[obj_name].addChild(objects.lb_1_mask);objects[obj_name].addChild(objects.lb_1_avatar);objects[obj_name].addChild(objects.lb_1_frame);objects[obj_name].addChild(objects.lb_1_crown);objects[obj_name].addChild(objects.lb_1_name);objects[obj_name].addChild(objects.lb_1_rating);app.stage.addChild(objects[obj_name]);"],["block","lb_1_name","objects[obj_name]=new PIXI.BitmapText('Иван Семенов', {font: '35px Century Gothic',align: 'center'});objects[obj_name].anchor.set(0.5,0);objects[obj_name].x=95;objects[obj_name].y=166;objects[obj_name].base_tint=objects[obj_name].tint=0XFFFF00;",""],["block","lb_1_rating","objects[obj_name]=new PIXI.BitmapText('1899', {font: '30px Century Gothic',align: 'center'});objects[obj_name].anchor.set(0.5,0);objects[obj_name].x=95;objects[obj_name].y=190;objects[obj_name].base_tint=objects[obj_name].tint=0XBDD7EE;",""],["sprite","lb_1_frame","objects[obj_name].x=10;objects[obj_name].y=50;",""],["sprite","lb_1_crown","objects[obj_name].x=98;objects[obj_name].y=24;",""],["block","lb_2_avatar","objects[obj_name]=new PIXI.Sprite();objects[obj_name].sx=objects[obj_name].x=20;objects[obj_name].sy=objects[obj_name].y=50;objects[obj_name].width=130;objects[obj_name].height=130;","objects[obj_name].mask=objects.lb_2_mask;"],["sprite","lb_2_mask","objects[obj_name].x=10;objects[obj_name].y=40;",""],["block","lb_2_name","objects[obj_name]=new PIXI.BitmapText('Игорь Васильев', {font: '32px Century Gothic',align: 'center'});objects[obj_name].anchor.set(0.5,0);objects[obj_name].x=85;objects[obj_name].y=140;objects[obj_name].base_tint=objects[obj_name].tint=0XFFFF00;",""],["block","lb_2_rating","objects[obj_name]=new PIXI.BitmapText('1455', {font: '30px Century Gothic',align: 'center'});objects[obj_name].anchor.set(0.5,0);objects[obj_name].x=88;objects[obj_name].y=166;objects[obj_name].base_tint=objects[obj_name].tint=0XBDD7EE;",""],["cont","lb_2_cont","objects[obj_name]=new PIXI.Container();objects[obj_name].visible=false;objects[obj_name].sx=objects[obj_name].x=130;objects[obj_name].sy=objects[obj_name].y=1635-1510+40;","objects[obj_name].addChild(objects.lb_2_avatar);objects[obj_name].addChild(objects.lb_2_mask);objects[obj_name].addChild(objects.lb_2_frame);objects[obj_name].addChild(objects.lb_2_crown);objects[obj_name].addChild(objects.lb_2_name);objects[obj_name].addChild(objects.lb_2_rating);app.stage.addChild(objects[obj_name]);"],["sprite","lb_2_frame","objects[obj_name].x=10;objects[obj_name].y=40;",""],["sprite","lb_2_crown","objects[obj_name].x=87;objects[obj_name].y=17;",""],["sprite","back_button","objects[obj_name].x=830;objects[obj_name].y=1810;objects[obj_name].visible=false;objects[obj_name].base_tint=objects[obj_name].tint;objects[obj_name].buttonMode=true;objects[obj_name].interactive=true;objects[obj_name].pointerdown=function(){cards_menu.back_button_down()};objects[obj_name].pointerover=function(){this.tint=0x55ffff};objects[obj_name].pointerout=function(){this.tint=this.base_tint};","app.stage.addChild(objects[obj_name]);"],["block","lb_3_avatar","objects[obj_name]=new PIXI.Sprite();objects[obj_name].sx=objects[obj_name].x=40;objects[obj_name].sy=objects[obj_name].y=50;objects[obj_name].width=120;objects[obj_name].height=120;","objects[obj_name].mask=objects.lb_3_mask;"],["sprite","lb_3_mask","objects[obj_name].x=40;objects[obj_name].y=50;",""],["block","lb_3_name","objects[obj_name]=new PIXI.BitmapText('Махмуд Аббас', {font: '30px Century Gothic',align: 'center'});objects[obj_name].anchor.set(0.5,0);objects[obj_name].x=100;objects[obj_name].y=130;objects[obj_name].base_tint=objects[obj_name].tint=0XFFFF00;",""],["block","lb_3_rating","objects[obj_name]=new PIXI.BitmapText('1234', {font: '28px Century Gothic',align: 'center'});objects[obj_name].anchor.set(0.5,0);objects[obj_name].x=100;objects[obj_name].y=150;objects[obj_name].base_tint=objects[obj_name].tint=0XBDD7EE;",""],["cont","lb_3_cont","objects[obj_name]=new PIXI.Container();objects[obj_name].visible=false;objects[obj_name].sx=objects[obj_name].x=-13;objects[obj_name].sy=objects[obj_name].y=1716-1510+40;","objects[obj_name].addChild(objects.lb_3_avatar);objects[obj_name].addChild(objects.lb_3_mask);objects[obj_name].addChild(objects.lb_3_frame);objects[obj_name].addChild(objects.lb_3_crown);objects[obj_name].addChild(objects.lb_3_name);objects[obj_name].addChild(objects.lb_3_rating);app.stage.addChild(objects[obj_name]);"],["sprite","lb_3_frame","objects[obj_name].x=40;objects[obj_name].y=50;",""],["sprite","lb_3_crown","objects[obj_name].x=11;objects[obj_name].y=22;",""],["sprite","big_message_bcg","objects[obj_name].x=10;objects[obj_name].y=10;objects[obj_name].base_tint=objects[obj_name].tint;",""],["block","big_message_text","objects[obj_name]=new PIXI.BitmapText('', {font: '25px Century Gothic', align: 'center'});objects[obj_name].anchor.set(0.5,0,5);objects[obj_name].maxWidth=270;objects[obj_name].x=160;objects[obj_name].y=30;objects[obj_name].base_tint=objects[obj_name].tint=0XF2F2F2;",""],["cont","big_message_cont","objects[obj_name]=new PIXI.Container();objects[obj_name].visible=false;objects[obj_name].sx=objects[obj_name].x=240;objects[obj_name].sy=objects[obj_name].y=40;objects[obj_name].show=function(){this.children.forEach(c=>{c.alpha=1;c.tint=c.base_tint})};","objects[obj_name].addChild(objects.big_message_bcg);objects[obj_name].addChild(objects.big_message_text);objects[obj_name].addChild(objects.close_big_message);objects[obj_name].addChild(objects.big_message_text2);app.stage.addChild(objects[obj_name]);"],["sprite","close_big_message","objects[obj_name].buttonMode=true;objects[obj_name].interactive=true;objects[obj_name].x=99;objects[obj_name].y=147;objects[obj_name].base_tint=objects[obj_name].tint;objects[obj_name].pointerover=function(){this.tint=0x55ffff};objects[obj_name].pointerout=function(){this.tint=this.base_tint};objects[obj_name].pointerdown=function(){big_message.close()};    ",""],["block","big_message_text2","objects[obj_name]=new PIXI.BitmapText('------', {font: '30px Century Gothic', align: 'center'});objects[obj_name].anchor.set(0.5,0,5);objects[obj_name].maxWidth=270;objects[obj_name].x=159;objects[obj_name].y=97;objects[obj_name].base_tint=objects[obj_name].tint=0XFFC000;",""],["image","blood_particle",""],["block","enemy","objects[obj_name]=new player_class('enemy');objects[obj_name].scale.x=-1;objects[obj_name].sx=objects[obj_name].x=810;objects[obj_name].sy=objects[obj_name].y=270;objects[obj_name].visible=false;","objects[obj_name].stand.texture=game_res.resources.stand.texture;app.stage.addChild(objects[obj_name]);"],["image","sm_left_arm1",""],["image","sm_right_arm1",""],["image","sm_spine",""],["image","sm_right_leg1",""],["image","sm_left_arm2",""],["image","sm_left_leg1",""],["image","sm_projectile",""],["image","sm_right_arm2",""],["image","sm_left_leg2",""],["image","sm_right_leg2",""],["block","player","objects[obj_name]=new player_class('player');objects[obj_name].sx=objects[obj_name].x=-10;objects[obj_name].sy=objects[obj_name].y=270;objects[obj_name].visible=false;","objects[obj_name].stand.texture=game_res.resources.stand.texture;app.stage.addChild(objects[obj_name]);"],["image","gl_left_arm1",""],["image","gl_right_arm1",""],["image","gl_spine",""],["image","gl_right_leg1",""],["image","gl_left_arm2",""],["image","gl_left_leg1",""],["image","gl_projectile",""],["image","gl_right_arm2",""],["image","gl_left_leg2",""],["image","gl_right_leg2",""],["image","ff_left_arm1",""],["image","ff_right_arm1",""],["image","ff_spine",""],["image","ff_right_leg1",""],["image","ff_left_arm2",""],["image","ff_left_leg1",""],["image","ff_projectile",""],["image","ff_right_arm2",""],["image","ff_left_leg2",""],["image","ff_right_leg2",""],["image","bs_left_arm1",""],["image","bs_right_arm1",""],["image","bs_spine",""],["image","bs_right_leg1",""],["image","bs_left_arm2",""],["image","bs_left_leg1",""],["image","bs_projectile",""],["image","bs_right_arm2",""],["image","bs_left_leg2",""],["image","bs_right_leg2",""],["sprite","next_fp_button","objects[obj_name].x=10;objects[obj_name].y=220;objects[obj_name].buttonMode=true;objects[obj_name].interactive=true;objects[obj_name].pointerdown=function(){fp_menu.next_fp_down()};objects[obj_name].pointerover=function(){this.tint=0x55ffff};objects[obj_name].pointerout=function(){this.tint=this.base_tint};objects[obj_name].base_tint=objects[obj_name].tint;",""],["sprite","save_fp_button","objects[obj_name].x=150;objects[obj_name].y=220;objects[obj_name].base_tint=objects[obj_name].tint;objects[obj_name].buttonMode=true;objects[obj_name].interactive=true;objects[obj_name].pointerdown=function(){fp_menu.save_fp_down()};objects[obj_name].pointerover=function(){this.tint=0x55ffff};objects[obj_name].pointerout=function(){this.tint=this.base_tint};",""],["cont","fp_cont","objects[obj_name]=new PIXI.Container();objects[obj_name].visible=false;objects[obj_name].sx=objects[obj_name].x=0;objects[obj_name].sy=objects[obj_name].y=0;","objects[obj_name].addChild(objects.fp_avatar);objects[obj_name].addChild(objects.fp_name_text);objects[obj_name].addChild(objects.fp_last_seen_text);objects[obj_name].addChild(objects.next_fp_button);objects[obj_name].addChild(objects.save_fp_button);app.stage.addChild(objects[obj_name]);"],["block","fp_avatar","objects[obj_name]=new PIXI.Sprite();objects[obj_name].sx=objects[obj_name].x=20;objects[obj_name].sy=objects[obj_name].y=10;objects[obj_name].width=90;objects[obj_name].height=80;",""],["block","fp_name_text","objects[obj_name]=new PIXI.BitmapText('', {font: '25px Century Gothic',align: 'center'});objects[obj_name].anchor.set(0.5,0);objects[obj_name].x=105;objects[obj_name].y=110;objects[obj_name].base_tint=objects[obj_name].tint=0X385723;",""],["block","fp_last_seen_text","objects[obj_name]=new PIXI.BitmapText('', {font: '25px Century Gothic',align: 'center'});objects[obj_name].anchor.set(0.5,0);objects[obj_name].x=105;objects[obj_name].y=140;objects[obj_name].base_tint=objects[obj_name].tint=0X385723;",""]];
+var test_sprite,fire_sprite;
+var skins_powers=[['s0_',3,0,0,3,0],['bm_',3,0,0,3,10],['bs_',4,1,1,4,20],['ff_',4,1,2,4,30],['gl_',5,2,3,5,40],['sm_',6,3,4,6,50]];
+
+test_mp=[[0,,0,,,,,],[0.02,,5,,,,,],[0.04,,10,,,,,],[0.06,,15,,,,,],[0.08,,20,,,,,],[0.1,,25,,,,,],[0.12,,30,,,,,],[0.14,,35,,,,,],[0.16,,40,,,,,],[0.18,,45,,,,,],[0.2,,50,,,,,],[6,,45,,,,,],[6.02,,40,,,,,],[6.04,,35,,,,,],[6.06,,30,,,,,],[6.08,,25,,,,,],[6.1,,20,,,,,],[6.12,,15,,,,,],[6.14,,10,,,,,],[6.16,,5,,,,,],[6.18,,0,,,,,]]
 
 class lb_player_card_class extends PIXI.Container{
 	
@@ -113,7 +115,7 @@ var particle_engine = {
 					
 					prtcl.x = prtcl.sx = this.coll_obj[this.coll_obj_id][0]+dx*this.disp;
 					prtcl.y = prtcl.sy = this.coll_obj[this.coll_obj_id][1]+dy*this.disp;
-					prtcl.scale.x = prtcl.scale.y = 0.6;
+					prtcl.scale.x = prtcl.scale.y = 0.2;
 					prtcl.x_traveled = 0;
 					prtcl.i=0;
 					prtcl.x_spd=Math.random() * 5 + 3+this.P*0.05;
@@ -150,8 +152,8 @@ var particle_engine = {
 					item.i += 0.2;
 					item.y += item.i*item.i;
 
-					item.scale.x -= 0.01;
-					item.scale.y -= 0.01;
+					item.scale.x += 0.03;
+					item.scale.y += 0.03;
 					//item.alpha = 1-(item.y-this.sy)/100;
 					
 					if (item.y > item.sy+100)
@@ -192,9 +194,13 @@ var particle_engine = {
 }
 
 skl_anim=	{
-		
-		
-	slots: [{cont: 'player', source: 0,	pos:0,	time:0,	speed:0, on:0},{cont: 'enemy', source: 0,	pos:0,	time:0,	speed:0, on:0}],
+			
+	slots: [
+		{cont: 'player', source: 0,	pos:0,	time:0,	speed:0, on:0},
+		{cont: 'enemy', source: 0,	pos:0,	time:0,	speed:0, on:0},
+		{cont: 'start_player', source: 0,	pos:0,	time:0,	speed:0, on:0},
+		{cont: 'shop_player', source: 0,	pos:0,	time:0,	speed:0, on:0}
+	],
 	
 	activate: function(cont_id,source) {		
 		this.slots[cont_id].on=1;
@@ -213,9 +219,14 @@ skl_anim=	{
 					
 			for (var s in p.source) {
 				
+				objects[p.cont]['zz_'+s].x=p.source[s][p.pos][0];
+				objects[p.cont]['zz_'+s].y=p.source[s][p.pos][1];
+				objects[p.cont]['zz_'+s].rotation=p.source[s][p.pos][2];
+				
 				objects[p.cont][s].x=p.source[s][p.pos][0];
 				objects[p.cont][s].y=p.source[s][p.pos][1];
 				objects[p.cont][s].rotation=p.source[s][p.pos][2];
+			
 			}
 					
 			p.time+=p.speed;
@@ -235,6 +246,10 @@ skl_anim=	{
 			cont[s].y=source[s][0][1]+source[s][2][1]*amount;
 			cont[s].rotation=source[s][0][2]+source[s][2][2]*amount;
 			
+			cont['zz_'+s].x=cont[s].x;
+			cont['zz_'+s].y=cont[s].y;
+			cont['zz_'+s].rotation=cont[s].rotation;
+			
 		}
 		
 	},
@@ -246,6 +261,11 @@ skl_anim=	{
 			cont[s].x=source[s][frame_id][0];
 			cont[s].y=source[s][frame_id][1];
 			cont[s].rotation=source[s][frame_id][2];
+			
+			cont['zz_'+s].x=cont[s].x;
+			cont['zz_'+s].y=cont[s].y;
+			cont['zz_'+s].rotation=cont[s].rotation;
+			
 		}				
 	}			
 }   
@@ -256,7 +276,35 @@ class player_class extends PIXI.Container{
 		
 		super();
 		
+		this.frozen=0;
+		this.frozen_start=0;
+		
+		//это возможности
+		this.powers={'block':3,'freeze':4,'fire':2};
+				
+		this.projectile_power='none';
+		
+		this.skin_id=0;
+		
 		this.name=name;
+		
+		
+		
+		
+		
+		this.zz_spine=new PIXI.Sprite(gres.zz_spine.texture); this.zz_spine.width=40;	this.zz_spine.height=80;	this.zz_spine.anchor.set(0.5,0.5);
+		
+		this.zz_left_arm1=new PIXI.Sprite(gres.zz_left_arm1.texture);	this.zz_left_arm1.width=40;	this.zz_left_arm1.height=20;	this.zz_left_arm1.anchor.set(0.5,0.5);
+		this.zz_left_arm2=new PIXI.Sprite(gres.zz_left_arm2.texture);	this.zz_left_arm2.width=40;	this.zz_left_arm2.height=20;	this.zz_left_arm2.anchor.set(0.5,0.5);
+		this.zz_right_arm1=new PIXI.Sprite(gres.zz_right_arm1.texture);	this.zz_right_arm1.width=40;	this.zz_right_arm1.height=20;	this.zz_right_arm1.anchor.set(0.5,0.5);
+		this.zz_right_arm2=new PIXI.Sprite(gres.zz_right_arm2.texture);	this.zz_right_arm2.width=40;	this.zz_right_arm2.height=20;	this.zz_right_arm2.anchor.set(0.5,0.5);
+		
+		this.zz_left_leg1=new PIXI.Sprite(gres.zz_left_leg1.texture);	this.zz_left_leg1.width=40;	this.zz_left_leg1.height=20;	this.zz_left_leg1.anchor.set(0.5,0.5);
+		this.zz_left_leg2=new PIXI.Sprite(gres.zz_left_leg2.texture);	this.zz_left_leg2.width=40;	this.zz_left_leg2.height=20;	this.zz_left_leg2.anchor.set(0.5,0.5);
+		this.zz_right_leg1=new PIXI.Sprite(gres.zz_right_leg1.texture);	this.zz_right_leg1.width=40;	this.zz_right_leg1.height=20;	this.zz_right_leg1.anchor.set(0.5,0.5);
+		this.zz_right_leg2=new PIXI.Sprite(gres.zz_right_leg2.texture);	this.zz_right_leg2.width=40;	this.zz_right_leg2.height=20;	this.zz_right_leg2.anchor.set(0.5,0.5);
+		this.zz_projectile=new PIXI.Sprite(gres.zz_projectile.texture);	this.zz_projectile.width=90;	this.zz_projectile.height=20;	this.zz_projectile.anchor.set(0.5,0.5);
+		
 		
 		this.spine=new PIXI.Sprite(); this.spine.width=40;	this.spine.height=80;	this.spine.anchor.set(0.5,0.5);
 		
@@ -270,12 +318,21 @@ class player_class extends PIXI.Container{
 		this.right_leg1=new PIXI.Sprite();	this.right_leg1.width=40;	this.right_leg1.height=20;	this.right_leg1.anchor.set(0.5,0.5);
 		this.right_leg2=new PIXI.Sprite();	this.right_leg2.width=40;	this.right_leg2.height=20;	this.right_leg2.anchor.set(0.5,0.5);
 		
-		this.projectile=new PIXI.Sprite();	this.projectile.width=90;	this.projectile.height=20;	this.projectile.anchor.set(0.5,0.5);
+		this.projectile_bcg=new PIXI.Sprite();	this.projectile_bcg.width=90;	this.projectile_bcg.height=20;	this.projectile_bcg.anchor.set(0.5,0.5);
+		this.projectile_2=new PIXI.Sprite();	this.projectile_2.width=90;	this.projectile_2.height=20;	this.projectile_2.anchor.set(0.5,0.5);
+		
+		this.projectile=new PIXI.Container();
+		this.projectile.addChild(this.projectile_bcg,this.projectile_2);
+					
 				
 		this.stand=new PIXI.Sprite();
-		this.stand.x=10;
+		this.stand.x=-20;
 		this.stand.y=135;		
+		this.stand.width=200;
+		this.stand.height=640;
 		
+		
+		//уровень жизни
 		this.life_level_bcg=new PIXI.Sprite(game_res.resources.life_level_bcg.texture);
 		this.life_level_bcg.x=10;
 		this.life_level_frame=new PIXI.Sprite(game_res.resources.life_level_frame.texture);
@@ -283,25 +340,115 @@ class player_class extends PIXI.Container{
 		this.life_level_front=new PIXI.Sprite(game_res.resources.life_level_front.texture);		
 		this.life_level_front.x=20;
 		
+		//блок сфера
+		this.block=new PIXI.Sprite(game_res.resources.block.texture);
+		this.block.x=80;
+		this.block.y=100;	
+		this.block.width=200;	this.block.height=200;	this.block.anchor.set(0.5,0.5);
+		this.block.visible=false;
+		this.block_start=0;
+		
+		//огонь	
+		this.on_fire=0;
+		this.on_fire_start=0;
+		let tex_arr = [];
+		for (var i = 0; i < 32; i++)
+			tex_arr.push(gres["fire"+i].texture);
+		this.fire=new PIXI.AnimatedSprite(tex_arr);
+		this.fire.anchor.set(0.5,1);
+		this.fire.x=90;
+		this.fire.y=160;
+		this.fire.visible=false;
+
 				
-		this.addChild(this.spine,this.left_arm1,this.left_arm2,this.right_arm1,this.right_arm2,this.left_leg1,this.left_leg2,this.right_leg1,
-		this.right_leg2,this.stand,this.projectile,this.life_level_bcg,this.life_level_front,this.life_level_frame);
+		this.addChild(
+		
+		this.zz_left_arm1,
+		this.zz_left_arm2,
+		this.zz_right_arm1,
+		this.zz_right_arm2,
+		this.zz_left_leg1,
+		this.zz_left_leg2,
+		this.zz_right_leg1,
+		this.zz_right_leg2,
+		this.zz_spine,	
+		this.zz_projectile,	
+		this.left_arm1,
+		this.left_arm2,
+		this.right_arm1,
+		this.right_arm2,
+		this.left_leg1,
+		this.left_leg2,
+		this.right_leg1,
+		this.right_leg2,
+		this.spine,
+		this.stand,
+		this.projectile,
+		this.life_level_bcg,
+		this.life_level_front,
+		this.life_level_frame,
+		this.fire,
+		this.block);
 		
 		this.base_col=JSON.parse(JSON.stringify(col_data));		
 		this.cur_col=JSON.parse(JSON.stringify(col_data));			
 		
 		this.tm=0;
-		this.next_p=0;
+		this.next_v=100;
+		this.mext_q=0.5;
 		this.next_time=0;
 		
 		this.life_level=100;
 
 	};
 	
+	activate_block() {
+				
+		anim.add_pos({obj: this.block,	param: 'alpha',	vis_on_end: true,	func: 'linear',	val: [0, 1],	speed: 0.1	});		
+		this.block_start=game_tick;
+		
+	}
+	
+	set_projectile_power(t) {
+		
+		t==='none'&&(this.projectile_bcg.texture=null);
+		t==='freeze'&&(this.projectile_bcg.texture=gres.projectile_freeze.texture);
+		t==='fire'&&(this.projectile_bcg.texture=gres.projectile_fire.texture);
+		this.projectile_power=t;
+	}
+	
     shift_height(h_dist) {
         anim.add_pos({obj: this, param: 'y',  vis_on_end: true,  func: 'easeOutBack', val: ['y', this.sy + h_dist], speed: 0.02 });
     };
 	
+	calc_next_fire() {
+		
+		//let v0=this.next_p;
+		let x0 = objects.enemy.x+objects.enemy.width/2;
+		let y0 = objects.enemy.y+50;
+
+		let x1 = objects.player.x+objects.player.width/2;
+		let y1 = objects.player.y+65;
+		
+		let dx=x0-x1;
+		let dh=y1-y0;
+		
+		//считаем параметры следующего снаряда
+		let Q1= Math.atan2(dh, dx);					
+		let Q=Q1-0.7;
+		let v1=(x0-x1)/Math.cos(Q);
+		let v2=0.5*9.8/(dh-Math.tan(Q)*dx)
+		let v0=v1*Math.sqrt(v2);
+		let dispersion=10;
+		console.log(v0);
+		v0=v0+Math.random()*dispersion-dispersion*0.5;				
+		
+		this.next_q=Q;
+		this.next_v=v0
+		this.next_time=game_tick+v0/30;
+		
+	};
+		
 	decrease_life(val) {
 		
 		let new_lev=this.life_level-val;
@@ -309,6 +456,32 @@ class player_class extends PIXI.Container{
 		this.life_level=new_lev;
 		this.life_level_front.scale.x=this.life_level*0.01;
 	};
+	
+	make_frozen() {
+					
+		
+		this.frozen=1;
+		this.frozen_start=game_tick;	
+		
+		if (this.name==='player') {
+			touch.stop();
+			skl_anim.slots[0].on=0;
+		} else {
+			
+			skl_anim.slots[1].on=0;
+		}
+		
+		this.set_skin_by_prefix('s1_');		
+	}
+	
+	make_on_fire() {
+		
+		this.on_fire=1;
+		this.on_fire_start=game_tick;
+		this.fire.play();
+		this.fire.visible=true;
+		
+	}
 	
 	process() {
 			
@@ -348,126 +521,174 @@ class player_class extends PIXI.Container{
 		
 		//обрабатываем данный код только если идет игра
 		if (state!=="playing")
-			return;			
+			return;		
+		
+		//обрабатываем события замороженного игрока
+		if (this.frozen===1) {				
+			if (game_tick-this.frozen_start>5){
+				this.frozen=0;
+				this.set_skin_by_id();
+			}
+			return;
+		};
+		
+		//обрабатываем события подожженного игрока
+		if (this.on_fire===1) {
+
+			this.decrease_life(0.1);
+			if (game_tick-this.on_fire_start>5){
+				this.on_fire=0;				
+				this.fire.visible=false;
+			}
+		};
+		
+		//обрабатываем время блока
+		if (this.block.visible===true && this.block.ready===true) {
+			if (game_tick>this.block_start+2) {
+				anim.add_pos({obj: this.block,	param: 'alpha',	vis_on_end: false,	func: 'linear',	val: [1, 0],	speed: 0.1	});
+			}	
+			
+			this.block.rotation+=0.1;
+		}
 				
 		//для оппонента обновляем дополнительные процессы
 		if(this.scale.x===-1) {
-			
-			if (game_tick>this.tm+this.next_time) {
-
-				
-				let v0=this.next_p;
-				let x0 = objects.enemy.x+objects.enemy.width/2;
-				let y0 = objects.enemy.y+50;
-
-				let x1 = objects.player.x+objects.player.width/2;
-				let y1 = objects.player.y+65;
-				
-				let dx=x0-x1;
-				let dh=y1-y0;
-				
-				//решение уравнения взято отсюда https://www.youtube.com/watch?v=32PiZDW40VI
-				let R=dx/v0; R=R*R*4.9;
-				let a=R;
-				let b=dx;
-				let c=R-dh;
-				let Q1=-Math.random()*0.3;
-				let Q2=0;
 						
-				let root1= b * b - (4 * a * c);
-				
-				//если есть решение то используем его
-				if (root1>=0) {					
-					let root = Math.sqrt(root1);					
-					let tanQ1 = (-b + root) / (2 * a);
-					let tanQ2 = (-b - root) / (2 * a);					
-					Q1=Math.atan(tanQ1);
-					Q2=Math.atan(tanQ2);					
-				}				
-				
-				console.table(root1, v0,Q1);
-				
+			if (game_tick>this.next_time) {
+								
 				//запускаем локальный снаряд
-				projectiles.add(Q1,v0, objects.player, objects.enemy.projectile.texture);
-									
+				let r_num=~~(Math.random()*3);
+				let p_t='none';
+				
+				if (r_num===1 && this.powers.freeze>0) {					
+					p_t='freeze';
+					this.powers.freeze--;					
+				}
+				
+				if (r_num===2 && this.powers.fire>0) {					
+					p_t='fire';
+					this.powers.fire--;					
+				}
+				
+				projectiles.add(this.next_q,this.next_v, objects.player, objects.enemy.projectile_2.texture, p_t);
+			
+				//сразу просчитываем следующий снаряд
+				this.calc_next_fire();
+			
 				//убираем копье и возвращаем его через некоторое время
-				this.projectile.visible=false;
-				setTimeout(function(){objects.enemy.projectile.visible=true},300);			
+				objects.enemy.projectile.visible=objects.enemy.zz_projectile.visible=false;
+				setTimeout(function(){objects.enemy.projectile.visible=objects.enemy.zz_projectile.visible=true},700);			
 							
 				//запускаем анимацию
 				skl_anim.activate(1,skl_throw);
 				
-				let r_num=Math.random();
-				this.next_p=r_num*100+30;
-				this.next_time=r_num*3+1;
-				this.tm=game_tick;
+
 			}			
 		}
-		
-
-
-	
 	};
+		
+	set_skin_by_id(id) {
+		
+		let skin_prefix=""
+		if (id===undefined) {
+			skin_prefix=skins_powers[this.skin_id][0];		
+		}else {
+			this.skin_id=id;
+			skin_prefix=skins_powers[id][0];
+		}
+
+		
+		this.set_skin_by_prefix(skin_prefix);
+		
+	}
 	
-	set_start(skin) {
-
-		this.left_leg1.texture=game_res.resources[skin+'left_leg1'].texture
-		this.left_leg2.texture=game_res.resources[skin+'left_leg2'].texture
-		this.right_leg1.texture=game_res.resources[skin+'right_leg1'].texture
-		this.right_leg2.texture=game_res.resources[skin+'right_leg2'].texture
+	set_skin_by_prefix (prefix) {
 		
-		this.left_arm1.texture=game_res.resources[skin+'left_arm1'].texture
-		this.left_arm2.texture=game_res.resources[skin+'left_arm2'].texture
-		this.right_arm1.texture=game_res.resources[skin+'right_arm1'].texture
-		this.right_arm2.texture=game_res.resources[skin+'right_arm2'].texture
+		this.left_leg1.texture=gres[prefix+'left_leg1'].texture
+		this.left_leg2.texture=gres[prefix+'left_leg2'].texture
+		this.right_leg1.texture=gres[prefix+'right_leg1'].texture
+		this.right_leg2.texture=gres[prefix+'right_leg2'].texture
 		
-		this.spine.texture=game_res.resources[skin+'spine'].texture
-		this.projectile.texture=game_res.resources[skin+'projectile'].texture
+		this.left_arm1.texture=gres[prefix+'left_arm1'].texture
+		this.left_arm2.texture=gres[prefix+'left_arm2'].texture
+		this.right_arm1.texture=gres[prefix+'right_arm1'].texture
+		this.right_arm2.texture=gres[prefix+'right_arm2'].texture
+		
+		this.spine.texture=gres[prefix+'spine'].texture;
+		this.projectile_2.texture=gres[prefix+'projectile'].texture	
+		
+	}
+	
+	init() {
+		
+		this.visible=true;
+		
+		//устанавливаем текстуры
+		this.set_skin_by_id();
+						
+		//заранее вычисляем когда и как будет направлен следующий снаряд
+		this.calc_next_fire();
+		
+		//устанавливаем вид игрока
+		skl_anim.goto_frame(this,skl_throw,0);
 				
-		this.life_level=100;
+		this.set_life(skins_powers[this.skin_id][4]*10);
+		this.powers.block=skins_powers[this.skin_id][1];
+		this.powers.freeze=skins_powers[this.skin_id][2];
+		this.powers.fire=skins_powers[this.skin_id][3];
 		
-			
-
+	}
+	
+	set_life(val) {
+		
+		this.life_level=val;
 		this.life_level_front.scale.x=this.life_level*0.01;
 		
-		this.tm=game_tick;
-		
-		let r_num=Math.random();
-		this.next_p=r_num*100+50;
-		this.next_time=r_num*3+1;
-		
-		//устанавливаем вид игроков
-		skl_anim.goto_frame(this,skl_throw,0);
 	}
 
 }
 
 var search_opponent = {
 
-	tm : {},
+	found_ok: 0,
+	wait_time:0,
+	start_wait_time:0,
 	
     start: function () {
 
-
-
 		
 		//это время когда начали поиска
-		this.tm.start_time=game_tick;		
-		
+		this.start_wait_time=game_tick;		
+		this.found_ok=0;
+		this.wait_time=Math.random()*10+2;
 		state="idle";
 
 		//устанавливаем процессинговую функцию
 		g_process=function(){search_opponent.process()};
-
+		
         //++++++++++++++++++++
-        anim.add_pos({
-            obj: objects.search_opponent_window,
-            param: 'y',
-            vis_on_end: true,
-            func: 'easeOutBack',
-            val: [450, 'sy'],
-            speed: 0.02
-        });
+        anim.add_pos({obj: objects.search_opponent_window,	param: 'y',	vis_on_end: true,	func: 'easeOutBack',	val: [450, 'sy'],	speed: 0.02});		
+		
+		//выбираем соперника
+		let rnd_id=Math.floor(Math.random()*6);
+		firebase.database().ref("fake_players/player"+rnd_id).once('value').then((snapshot) => {		
+						
+			var data=snapshot.val();
+			opp_data.name=data.name;
+			opp_data.rating=data.rating;
+			opp_data.pic_url=data.pic_url;
+			
+			var loader=new PIXI.Loader();
+			loader.add('opp_avatar', opp_data.pic_url,{loadType: PIXI.loaders.Resource.LOAD_TYPE.IMAGE});
+			loader.load((loader, resources) => {
+				objects.enemy_avatar.texture = resources.opp_avatar.texture;
+				
+				objects.enemy_name_text.text=opp_data.name;
+				objects.enemy_rating_text.text=opp_data.rating;
+				
+				this.found_ok=1;
+			});			
+		})
 
     },
 
@@ -475,16 +696,15 @@ var search_opponent = {
 
     	if (state!=="idle")
     	    return;
-
-
-        objects.search_opponent_progress.rotation += 0.1;
+		
+		if (game_tick>this.start_wait_time + this.wait_time){
 			
-		if (game_tick>this.tm.start_time+1) {
-			
-			game.h_data = [0, -20];
-			this.found();
+			if (this.found_ok===1)
+				this.found();	
 			
 		}
+
+        objects.search_opponent_progress.rotation += 0.1;
     },
 
 	found: function () {
@@ -495,6 +715,8 @@ var search_opponent = {
         state="playing";
 		
 		g_process=function(){};
+		
+		game.h_data = [-30, -40];
 		
 		//активируем игру
 		game.activate();
@@ -540,13 +762,12 @@ var projectiles = {
 
     a : [],
 
-    projectile_class: class extends PIXI.Sprite {
+    projectile_class: class extends PIXI.Container {
 
 		constructor() {
 			super();
 			this.x0 = 0;
 			this.y0 = 0;
-			this.damage=10;
 			this.on = 0;
 			this.vx0 = 0;
 			this.vy0 = 0;
@@ -554,8 +775,7 @@ var projectiles = {
 			this.coll_obj_id=0;
 			
 			this.sx=0;
-			this.sy=0;
-			
+			this.sy=0;			
 			
 			this.int_x=0;
 			this.int_y=0;
@@ -563,18 +783,31 @@ var projectiles = {
 			this.P=0;
 			this.t=0;
 			this.disp=0;
-			this.target = "me";
+			this.target = "";
 			this.visible=false;
 
-			this.anchor.set(0.5,0.5);
+			
 			this.process=function(){};
+			
+			this.p_bcg=new PIXI.Sprite();this.p_bcg.anchor.set(0.5,0.5);
+			this.p_sprite=new PIXI.Sprite();this.p_sprite.anchor.set(0.5,0.5);
+			this.power='none';
+			
+			
+			this.addChild(this.p_bcg, this.p_sprite);
+			
 			app.stage.addChild(this);			
 			
 		};		
 		
-		activate(Q,P, target, spear) {
+		activate(Q,P, target, spear, power) {
 			
-			this.texture=spear;
+			power==='none'&&(this.p_bcg.texture=gres.zz_projectile.texture);
+			power==='freeze'&&(this.p_bcg.texture=gres.projectile_freeze.texture);
+			power==='fire'&&(this.p_bcg.texture=gres.projectile_fire.texture);
+			this.power=power;
+			
+			this.p_sprite.texture=spear;			
 			
 			this.vx0 = Math.cos(Q)*P;
 			this.vy0 = Math.sin(Q)*P;
@@ -582,14 +815,19 @@ var projectiles = {
 			this.target = target;
 
 			if (target.name === "player") {
-				this.scale.x=-1;
-				this.vx0=-this.vx0;
+				this.vx0=-this.vx0;				
 				this.x0 = objects.enemy.x+objects.enemy.width/2;
-				this.y0 = objects.enemy.y+60;
-			} else {
+				this.y0 = objects.enemy.y+30;
 				this.scale.x=1;
-				this.x0 = objects.player.x+objects.player.width/2;
-				this.y0 = objects.player.y+60;
+				
+			} else {
+				
+				//запускаем снаряд в зависимости от наклона тела
+				let dxv=Math.sin(objects.player.spine.rotation);
+				let dyv=-Math.cos(objects.player.spine.rotation);			
+				this.x0 = objects.player.x+objects.player.spine.x+dxv*30;
+				this.y0 = objects.player.y+objects.player.spine.y+dyv*30;
+				this.scale.x=-1;
 			}
 			
 			this.width=90;
@@ -614,11 +852,14 @@ var projectiles = {
 			
 			let cor_width=this.width-15;
 
-			let x0 = this.x + dx * cor_width / 2;
-			let y0 = this.y + dy * cor_width / 2;
-
-			let x1 = this.x - dx * cor_width / 2;
-			let y1 = this.y - dy * cor_width / 2;
+			//в копье работает только первая половина, чтобы не стукнуться о заднюю
+			let dir=Math.sign(this.vx0);
+			
+			let x0 = this.x ;
+			let y0 = this.y ;		
+			
+			let x1 = this.x + dir * dx * cor_width / 2;
+			let y1 = this.y + dir * dy * cor_width / 2;
 
 			return [x0, y0, x1, y1];
 
@@ -626,15 +867,22 @@ var projectiles = {
 		
 		stop(int_x,int_y, coll_obj, coll_obj_id) {
 				
-				
+	
+			this.on = 0;
+			this.process = this.process_stop;
+			
+			//это если столкновение не с игроками
+			if (coll_obj_id===undefined) {
+				this.coll_obj_id=undefined;
+				return;				
+			}
+
+			
 			this.int_x=int_x;
 			this.int_y=int_y;
 			
 			this.sx=this.x;
-			this.sy=this.y;
-						
-			this.on = 0;
-			this.process = this.process_stop;
+			this.sy=this.y;				
 			
 			this.coll_obj=coll_obj;
 			this.coll_obj_id=coll_obj_id;
@@ -643,11 +891,6 @@ var projectiles = {
 			let dx=int_x-this.coll_obj[this.coll_obj_id][0];
 			let dy=int_y-this.coll_obj[this.coll_obj_id][1];
 			this.disp=Math.sqrt(dx*dx+dy*dy);
-			
-			
-			
-			
-			
 				
 		};
 		
@@ -682,7 +925,12 @@ var projectiles = {
 				this.process = () => {};
 			}
 			
+			if (this.coll_obj_id===undefined) {
+				return;				
+			}
+			
 	
+			//это передвижение синхронно с конечностью в которое попала
 			let dx=this.coll_obj[this.coll_obj_id+1][0]-this.coll_obj[this.coll_obj_id][0];
 			let dy=this.coll_obj[this.coll_obj_id+1][1]-this.coll_obj[this.coll_obj_id][1];
 			let d=Math.sqrt(dx*dx+dy*dy);
@@ -704,11 +952,11 @@ var projectiles = {
 			this.a.push(new this.projectile_class());
 	},
 
-    add: function (Q,P, target, spear) {
+    add: function (Q,P, target, spear, bcg_type) {
 		
 		for (let i=0;i<10;i++) {
 			if (this.a[i].visible===false){
-				this.a[i].activate(Q,P, target, spear);
+				this.a[i].activate(Q,P, target, spear, bcg_type);
 				return;				
 			}
 		}
@@ -786,6 +1034,7 @@ var process_collisions=function() {
 			
 			let l = proj.get_line();	
 		
+			//проверяем столкновение с  частями тела игрока или оппонента
 			for (let i=0;i<proj.target.cur_col.length;i++) {
 				
 				let limb_name=proj.target.cur_col[i][0];
@@ -797,19 +1046,26 @@ var process_collisions=function() {
 					let res = get_line_intersection(l[0], l[1], l[2], l[3], data[p][0], data[p][1], data[p + 1][0], data[p + 1][1]);
 					if (res[0] !== -999 && proj.on===1) {
 						
-						//добавляем поток крови и данные объекта с которым она столкнулась
-						particle_engine.add(res[0], res[1], -Math.sign(proj.vx0),proj.P, proj.target.cur_col[i][2], p);
-						
 						//останавливаем копье
 						proj.stop(res[0], res[1], proj.target.cur_col[i][2], p);
 						
 						//основной уровн копья
-						let sum_damage=proj.damage;
-											
-						////уменьшаем жизнь
-						proj.target.decrease_life(Math.round(sum_damage));
+						let sum_damage=proj.P;
 						
-						console.log(limb_name);
+						if (limb_name==="head")
+							sum_damage=sum_damage*1.5;
+												
+						proj.power==='freeze'&&(proj.target.make_frozen());						
+						proj.power==='fire'&&(proj.target.make_on_fire());
+						
+						
+						//добавляем поток крови и данные объекта с которым она столкнулась
+						particle_engine.add(res[0], res[1], -Math.sign(proj.vx0),sum_damage*0.3, proj.target.cur_col[i][2], p);						
+											
+						//уменьшаем жизнь
+						proj.target.decrease_life(Math.round(sum_damage*0.05));
+						
+						console.log(sum_damage);
 						
 						//показываем хэдшот
 						if (limb_name==="head")						
@@ -817,6 +1073,27 @@ var process_collisions=function() {
 					}						
 				}					
 			}	
+			
+			//проверяем столкновение с блоками
+			if (proj.target.block.visible===true) {
+				
+				let bx=proj.target.x+proj.target.block.x;
+				let by=proj.target.y+proj.target.block.y;
+				let r=proj.target.block.width*0.5;
+				
+				let dx1=bx-l[0];
+				let dy1=by-l[1];
+				
+				let dx2=bx-l[2];
+				let dy2=by-l[3];
+				
+				let d1=Math.sqrt(dx1*dx1+dy1*dy1);
+				let d2=Math.sqrt(dx2*dx2+dy2*dy2);
+				
+				if (d1<r || d2<r)
+					proj.stop();
+				
+			}
 			
 		}				
 	})	
@@ -1018,38 +1295,95 @@ var anim = {
 
 }
 
+var mini_process={
+	
+	
+	mp_array: [null, null, null, null, null, null, null, null, null, null, null],
+
+	add : function(mp, obj) {
+
+		for (var i = 0; i < this.mp_array.length; i++) {
+
+			if (this.mp_array[i]===null) {
+
+				obj.ready=false;
+				this.mp_array[i]={
+					p: mp,
+					obj: obj,	
+					st: game_tick,
+					p_i:0,
+				}
+				return;
+			}
+
+		}
+	},
+	 
+	process: function() {	
+	
+		for (var i = 0; i < this.mp_array.length; i++) {
+			
+			if (this.mp_array[i]!==null) {
+
+				let mp=this.mp_array[i];
+				let ct=game_tick-mp.st;
+				
+				//проверяем достигло ли время следующей точки процесса (анимации)
+				if (ct>mp.p[mp.p_i][0]) {					
+					
+					mp.p[mp.p_i][1]!==undefined&&(mp.obj.x=mp.obj.sx+mp.p[mp.p_i][1]);
+					mp.p[mp.p_i][2]!==undefined&&(mp.obj.y=mp.obj.sy+mp.p[mp.p_i][2]);
+					mp.p[mp.p_i][3]!==undefined&&(mp.obj.rotation=mp.p[mp.p_i][3]);
+					mp.p[mp.p_i][4]!==undefined&&(mp.obj.alpha=mp.p[mp.p_i][4]);
+					mp.p[mp.p_i][5]!==undefined&&(mp.obj.scale.x=mp.p[mp.p_i][5]);
+					mp.p[mp.p_i][6]!==undefined&&(mp.obj.scale.y=mp.p[mp.p_i][6]);
+					mp.p[mp.p_i][7]!==undefined&&(mp.obj.visible=mp.p[mp.p_i][7]);
+					
+					mp.p_i++;			
+					
+					if (mp.p_i===mp.p.length) {
+						this.mp_array[i]=null;
+						mp.obj.ready=true;						
+					}
+					
+					
+				}
+			}	
+		}		
+	}
+	
+	
+	
+}
+
 var main_menu = {
 	
+	tween_spd: 1,
+	start_time:0,
 	activate : function() {
 		
 		//++++++++++++++++++++
-		anim.add_pos({
-			obj: objects.main_buttons_cont,
-			param: 'y',
-			vis_on_end: true,
-			func: 'easeOutBack',
-			val: [450, 'sy'],
-			speed: 0.02
-		});
-		
-	
-		anim.add_pos({
-			obj: objects.my_data_cont,
-			param: 'alpha',
-			vis_on_end: true,
-			func: 'linear',
-			val: [0, 1],
-			speed: 0.01
-		});
+		anim.add_pos({obj: objects.main_buttons_cont,	param: 'y',	vis_on_end: true,	func: 'easeOutBack',	val: [450, 'sy'],	speed: 0.02	});
+			
+		objects.start_player.visible=true;
+		objects.start_player.init(0);
+
+		objects.start_player.life_level_bcg.visible=false;
+		objects.start_player.life_level_frame.visible=false;
+		objects.start_player.life_level_front.visible=false;
+		objects.start_player.scale.x=objects.start_player.scale.y=2;
 		
 		objects.sprite_001.visible=true;
 		
+		//устанавливаем фон
+		objects.bcg.texture=game_res.resources["bcg_1"].texture;
+
 		
-		//обновляем шкалу достижений
-		exp.refresh();
+		this.start_time=game_tick;
 		
-		//показываем сколько игроков онлайн
-		objects.online_users_text.visible=true;
+		//устанавливаем процессинговую функцию
+		g_process=function(){main_menu.process()};
+		
 		
 	},
 	
@@ -1063,8 +1397,6 @@ var main_menu = {
 		
 		this.hide();
 		
-		//скрываем сколько игроков онлайн
-		objects.online_users_text.visible=false;
 		
 		//переходим в состояние поиска соперника
 		search_opponent.start();
@@ -1085,125 +1417,286 @@ var main_menu = {
 	hide: function() {
 		
 		objects.sprite_001.visible=false;
-			
+		objects.start_player.visible=false;
+		
+
 		//------------------------
-		anim.add_pos({
-			obj: objects.main_buttons_cont,
-			param: 'y',
-			vis_on_end: false,
-			func: 'easeInBack',
-			val: ['sy',450],
-			speed: 0.02
-		});
+		anim.add_pos({obj: objects.main_buttons_cont,param: 'y',vis_on_end: false,func: 'easeInBack',val: ['sy',450],speed: 0.02});
+		anim.add_pos({obj: objects.my_data_cont,param: 'alpha',	vis_on_end: false,	func: 'linear',	val: [1,0],	speed: 0.02	});
 		
-		//------------------------
-		anim.add_pos({
-			obj: objects.my_data_cont,
-			param: 'alpha',
-			vis_on_end: false,
-			func: 'linear',
-			val: [1,0],
-			speed: 0.02
-		});
+	},
+	
+	change_tween_spd: function() {		
+		this.tween_spd=Math.random()+0.5;	
+		setTimeout(main_menu.change_tween_spd, 3000);
+	},
+	
+	shop_button_down: function() {
+		
+		this.hide();
+		shop.activate();
 		
 		
+	},
+	
+	process: function() {			
+		
+		if (game_tick>this.start_time+5) {
+			skl_anim.activate(2,skl_throw);
+			this.start_time=game_tick;
+		}
+
+		if (skl_anim.slots[2].on===0)
+			skl_anim.tween(objects.start_player,skl_prepare,Math.sin(game_tick*this.tween_spd)*0.5+0.5);
+	}
+	
+}
+
+var shop={
+	
+	start_time:0,
+	tween_spd: 1,
+	sel_skin: 0,
+	
+	activate: function() {
+		
+		objects.shop_player.life_level_bcg.visible=false;
+		objects.shop_player.life_level_frame.visible=false;
+		objects.shop_player.life_level_front.visible=false;
+		objects.shop_player.stand.visible=false;
+		
+		objects.shop_player.scale.x=objects.shop_player.scale.y=1.8;
+		objects.shop_player.init();	
+		
+		objects.shop_cont.visible=true;
+		objects.bcg.texture=gres.shop_bcg.texture;
+		
+		//устанавливаем вид и параметры текущего скина
+		this.sel_skin=objects.start_player.skin_id=objects.player.skin_id;
+		this.next_button_down(0);
+		
+		this.start_time=game_tick;
+		
+		//устанавливаем процессинговую функцию
+		g_process=function(){shop.process()};
+	},
+	
+	process: function() {			
+		
+		if (game_tick>this.start_time+5) {
+			skl_anim.activate(3,skl_throw);
+			this.start_time=game_tick;
+		}
+
+		if (skl_anim.slots[3].on===0)
+			skl_anim.tween(objects.shop_player,skl_prepare,Math.sin(game_tick*this.tween_spd)*0.5+0.5);
+	},
+	
+	next_button_down: function(v) {
+		
+		this.sel_skin+=v;
+		this.sel_skin>=(skins_powers.length-1)&&(this.sel_skin=skins_powers.length-1);
+		this.sel_skin===-1&&(this.sel_skin=0)
+		
+		
+		
+		objects.shop_player.set_skin_by_id(this.sel_skin);	
+		
+		let blocks=skins_powers[this.sel_skin][1];
+		let freeze=skins_powers[this.sel_skin][2];
+		let fire=skins_powers[this.sel_skin][3];
+		let life=skins_powers[this.sel_skin][4];
+		
+		
+		for (let x=0;x<8;x++)
+			x<blocks? objects.shop_leds[x].visible=true:objects.shop_leds[x].visible=false;
+		
+		for (let x=0;x<8;x++)
+			x<freeze? objects.shop_leds[x+8].visible=true:objects.shop_leds[x+8].visible=false;
+		
+		for (let x=0;x<8;x++)
+			x<fire? objects.shop_leds[x+16].visible=true:objects.shop_leds[x+16].visible=false;
+		
+		for (let x=0;x<8;x++)
+			x<life? objects.shop_leds[x+24].visible=true:objects.shop_leds[x+24].visible=false;
+	},
+	
+	buy_button_down: function() {
+		
+		//присваиваем айди скина
+		objects.player.skin_id=this.sel_skin;
+		
+		
+		big_message.show("Вы купили нового персонажа", ")))");
+		
+	},
+	
+	back_button_down: function() {
+		
+		objects.shop_cont.visible=false;	
+		objects.shop_leds.forEach(e=>{e.visible=false});
+		objects.bcg.texture=gres.bcg_0.texture;
+		main_menu.activate();
 		
 	}
 	
 }
 
-var fp_menu= {
+var power_buttons = {
+		
+	selected_power: 'none',
+	rem_time:{block:0, freeze:0, fire:0},
 	
-	activate : function() {
+	block_down: function() {
+		
+		if (objects.player.block.visible===true)
+			return;
+				
+		if (objects.player.powers.block<=0)
+			return;
 		
 		
-		//заполняем базу данных фейковыми игроками
-		firebase.database().ref("fake_players/player0").set({uid:507283181, rating:1400});
-		firebase.database().ref("fake_players/player0").set({uid:623665245, rating:1400});
-		firebase.database().ref("fake_players/player0").set({uid:234918613, rating:1400});
-		firebase.database().ref("fake_players/player0").set({uid:200131962, rating:1400});
-		firebase.database().ref("fake_players/player0").set({uid:375350802, rating:1400});
-		firebase.database().ref("fake_players/player0").set({uid:330875441, rating:1400});
-		firebase.database().ref("fake_players/player0").set({uid:376119283, rating:1400});
+		this.rem_time.block=game_tick;
+		
+		//уменьшаем количество
+		objects.player.powers.block--;
+		objects.block_text.text=objects.player.powers.block;
+		
+		//убираем кнопку в ожидаение
+		anim.add_pos({obj: objects.block_button,	param: 'y',	vis_on_end: false,	func: 'easeInBack',	val: ['sy', -50],	speed: 0.02});
+		anim.add_pos({obj: objects.block_text,	param: 'y',	vis_on_end: false,	func: 'easeInBack',	val: ['sy', -50],	speed: 0.02});
+		
+		//активируем блок
+		objects.player.activate_block();
+		
+	},
+	
+	freeze_down: function() {
 		
 		
-		//++++++++++++++++++++
-		anim.add_pos({obj: objects.fp_cont,	param: 'y',	vis_on_end: true,	func: 'easeOutBack',val: [450, 'sy'],speed: 0.02});
+		if (objects.player.powers.freeze<=0)
+			return;
+		
+		if (this.selected_power==='freeze') {
+			this.selected_power='none';				
+			objects.player.set_projectile_power('none');		
+			objects.upg_button_frame.visible=false;
+		} else {
+			this.selected_power='freeze';				
+			objects.player.set_projectile_power('freeze');		
+			objects.upg_button_frame.x=objects.freeze_button.x;
+			objects.upg_button_frame.y=objects.freeze_button.y;
+			objects.upg_button_frame.visible=true;
+		}
+
+		
+	},
+	
+	fire_down: function() {
+		
+		if (objects.player.powers.fire<=0)
+			return;
+		
+		if (this.selected_power==='fire') {
+			this.selected_power='none';				
+			objects.player.set_projectile_power('none');		
+			objects.upg_button_frame.visible=false;
+		} else {
+			this.selected_power='fire';				
+			objects.player.set_projectile_power('fire');		
+			objects.upg_button_frame.x=objects.fire_button.x;
+			objects.upg_button_frame.y=objects.fire_button.y;
+			objects.upg_button_frame.visible=true;
+		}
 		
 		
 	},
 	
-	//нажатие на кнопку
-	next_fp_down: function() {
+	process: function() {
 		
-		var rnd_id=Math.floor(Math.random()*567437245);
+		if (objects.block_button.visible===false) {
+			if (game_tick>this.rem_time.block+5) {
+				anim.add_pos({obj: objects.block_button,	param: 'y',	vis_on_end: true,	func: 'easeOutBack',	val: [-50,'sy'],	speed: 0.02});
+				anim.add_pos({obj: objects.block_text,	param: 'y',	vis_on_end: true,	func: 'easeOutBack',	val: [-50,'sy'],	speed: 0.02});
+			}
+		};
 		
-		VK.api(
-			"users.get", {
-			access_token: '03af491803af491803af4918d103d800b3003af03af491863c040d61bee897bd2785a50',
-			user_ids: rnd_id,
-			fields: 'photo_100,has_photo,last_seen'
-		},
-			function (data) {
-				
-			let first_name = data.response[0].first_name;
-			let last_name = data.response[0].last_name;
-			let pic_url = data.response[0].photo_100;
-			let ls=data.response[0].last_seen;
-			
-			
-			if (first_name===undefined) {				
-				objects.fp_name_text.text="UNDEFINED";
-			}	else	{
-				objects.fp_name_text.text=first_name+" "+last_name;
+		if (objects.freeze_button.visible===false) {
+			if (game_tick>this.rem_time.freeze+5) {
+				anim.add_pos({obj: objects.freeze_button,	param: 'y',	vis_on_end: true,	func: 'easeOutBack',	val: [-50,'sy'],	speed: 0.02});
+				anim.add_pos({obj: objects.freeze_text,	param: 'y',	vis_on_end: true,	func: 'easeOutBack',	val: [-50,'sy'],	speed: 0.02});
 			}
-
-			if (ls===undefined) {				
-				objects.fp_last_seen_text.text="UNDEFINED";
-			}	else	{
-				objects.fp_last_seen_text.text=new Date(ls.time*1000).toLocaleString();				
+		};
+		
+		if (objects.fire_button.visible===false) {
+			if (game_tick>this.rem_time.fire+5) {
+				anim.add_pos({obj: objects.fire_button,	param: 'y',	vis_on_end: true,	func: 'easeOutBack',	val: [-50,'sy'],	speed: 0.02});
+				anim.add_pos({obj: objects.fire_text,	param: 'y',	vis_on_end: true,	func: 'easeOutBack',	val: [-50,'sy'],	speed: 0.02});
 			}
-			
-			
-			//загружаем аватар игрока			
-			var loaderOptions = {loadType: PIXI.loaders.Resource.LOAD_TYPE.IMAGE};
-			var loader = new PIXI.Loader();
-			
-			if (pic_url!=='' && pic_url!==undefined) {
-				
-				loader.add('fp_avatar', pic_url,loaderOptions);			
-				loader.load((loader, resources) => {				
-						objects.fp_avatar.texture=resources['fp_avatar'].texture;
-
-				});			
-				
-			}
-
-			
-			
-		})
+		};
 		
 	},
 	
-	//нажатие на кнопку
-	save_fp_down: function() {
+	freeze_fired: function() {
 		
-
+		this.rem_time.freeze=game_tick;
+	
+		objects.player.powers.freeze--;
+		objects.freeze_text.text=objects.player.powers.freeze;
+		
+		//убираем кнопку в ожидаение
+		anim.add_pos({obj: objects.freeze_button,	param: 'y',	vis_on_end: false,	func: 'easeInBack',	val: ['sy', -50],	speed: 0.02});
+		anim.add_pos({obj: objects.freeze_text,	param: 'y',	vis_on_end: false,	func: 'easeInBack',	val: ['sy', -50],	speed: 0.02});
 		
 	},
-		
 	
+	fire_fired: function() {
+		
+		this.rem_time.fire=game_tick;
+		
+		objects.player.powers.fire--;
+		objects.fire_text.text=objects.player.powers.fire;		
+		
+		//убираем кнопку в ожидаение
+		anim.add_pos({obj: objects.fire_button,	param: 'y',	vis_on_end: false,	func: 'easeInBack',	val: ['sy', -50],	speed: 0.02});
+		anim.add_pos({obj: objects.fire_text,	param: 'y',	vis_on_end: false,	func: 'easeInBack',	val: ['sy', -50],	speed: 0.02});
+	},
+	
+	init: function () {
+		
+		anim.add_pos({obj: objects.power_buttons_cont,	param: 'y',	vis_on_end: true,	func: 'easeOutBack',	val: [450, 'sy'],	speed: 0.02	});
+		objects.block_text.text=objects.player.powers.block;
+		objects.freeze_text.text=objects.player.powers.freeze;
+		objects.fire_text.text=objects.player.powers.fire;
+		
+	}
 	
 	
 }
 
-var game = {
+var fp= {
 
+	
+	update : function() {		
+		
+		var fake_users={"response":[{"first_name":"Рома","id":507283181,"last_name":"Булькин","can_access_closed":true,"is_closed":false,"photo_100":"https:\/\/sun7-6.userapi.com\/s\/v1\/ig2\/LkRGH-HCSuhPi2ByyrLsRt27a8ML0__vuSPJFl53CiK6lh7Ndg02XUmagQoCNM1pdp0mWk5rR2uqLsnMQUucrCXp.jpg?size=100x0&quality=96&crop=8,0,591,591&ava=1"},{"first_name":"Moona","id":623665245,"last_name":"Fıcherbert","can_access_closed":false,"is_closed":true,"photo_100":"https:\/\/sun7-13.userapi.com\/s\/v1\/ig2\/vsRlANcqq2o6fT3oPFK3FYsy8uCGmZh2NzuJ5rucFJDB7oT4BREYh6SGTzYmXBNBlNZkRSZNGbY4-OWYE8qpcqNq.jpg?size=100x0&quality=96&crop=541,581,1156,1156&ava=1"},{"first_name":"Irina","id":234918613,"last_name":"Fadeeva","can_access_closed":false,"is_closed":true,"photo_100":"https:\/\/sun7-8.userapi.com\/s\/v1\/ig2\/G2rq96n4Wjkv3g4eWhwTaS38qpLgyd4jHnKOpUS77SAJS5BWIRTw8hNEMALWRm1evwzwfuOE4RfksZwuS0m3SBIc.jpg?size=100x0&quality=96&crop=0,459,1333,1333&ava=1"},{"first_name":"Полина","id":200131962,"last_name":"Ермолович","can_access_closed":true,"is_closed":false,"photo_100":"https:\/\/sun7-6.userapi.com\/s\/v1\/ig2\/O6DFyQLmt2zppmG5ooXGZYh4QvQuhER9AqKMmoRP5o8qDSGJRrUS5NWP0cbE1Qkp6MAZ36eSS-T9xHN4BADy1R3Z.jpg?size=100x0&quality=96&crop=60,87,974,974&ava=1"},{"first_name":"Роман","id":375350802,"last_name":"Морозов","can_access_closed":true,"is_closed":false,"photo_100":"https:\/\/sun7-9.userapi.com\/s\/v1\/ig2\/wiwTO-He6NV50qCRPoBOCRGwkcNSnFOOHZC-BpsFg0wNVDZGCCv18FJboInF9Xr7OiX8RYgTG_rszGl90dVaMGAB.jpg?size=100x0&quality=96&crop=394,893,788,788&ava=1"},{"first_name":"Fernando","id":330875441,"last_name":"Sucre","can_access_closed":true,"is_closed":false,"photo_100":"https:\/\/sun7-14.userapi.com\/s\/v1\/ig2\/ybhYg29zIigakUZJsfQq2HGPtmKF9v7ZjxNmO43P8vnpv0gWPN7nOFjYJDh32S3we7xJIEiS6HSq0tiGyCEGHSBT.jpg?size=100x0&quality=96&crop=0,251,900,900&ava=1"},{"first_name":"Алёна","id":376119283,"last_name":"Фатахова","can_access_closed":false,"is_closed":true,"photo_100":"https:\/\/sun7-9.userapi.com\/s\/v1\/ig2\/Sl9czb7DdXfm1ApU6yNxAkxZPUbeUYgMBDicoLdOXd7Xoke2qXJ4ESeaGxEKrLD6manObQLQmOVjz-4VEM-uFJ6M.jpg?size=100x0&quality=96&crop=216,216,1728,1728&ava=1"}]};
+		
+		fake_users=fake_users.response;
+		
+		fake_users.forEach((user,index)=>{			
+			firebase.database().ref("fake_players/player"+index).set({name:user.first_name+' ' +user.last_name, pic_url:user.photo_100, rating:1400});
+		})		
+	}	
+
+}
+
+var game = {
 
 	p_time: 0,
 	sec_check:0,
 	h_data:[0,0],
 	cur_round: 0,
+	block_start_time: 0,
     process: function () {},
 
     activate: function () {
@@ -1220,23 +1713,27 @@ var game = {
 
 		//устанавливаем фон
 		objects.bcg.texture=game_res.resources["bcg_1"].texture;
-
-		//отображаем игроков
-		objects.player.visible = true;
-		objects.enemy.visible = true;
 		
+		//восстанавливаем жизни и количество копий
+		objects.enemy.skin_id=~~(Math.random()*6);
+		
+		objects.player.init();
+		objects.enemy.init();
+		
+	
+		//добаляем кнопки 
+		power_buttons.init();
 	
 					
 		//включаем табло оппонента
-		objects.opponent_name_cont.visible = true;
-		objects.player_name_cont.visible = true;
+		objects.player_card_cont.visible = true;
+		objects.enemy_card_cont.visible = true;
 		
 		//обновляем мои данные
-		objects.my_avatar.texture=objects.my_data_photo.texture;
+		objects.player_avatar.texture=objects.my_data_photo.texture;
 		objects.player_name_text.text=objects.my_data_name.text;
 		objects.player_rating_text.text=objects.my_data_rating.text;
 		
-
 	
 		this.process_round(1);
     },
@@ -1253,9 +1750,11 @@ var game = {
 		objects.player.visible = false;
 		objects.enemy.visible = false;
 		
-		//включаем табло оппонента
-		objects.opponent_name_cont.visible = false;
-		objects.player_name_cont.visible = false;
+		//выключаем табло оппонента
+		objects.player_card_cont.visible = false;
+		objects.enemy_card_cont.visible = false;
+		
+		objects.power_buttons_cont.visible = false;
 
 		main_menu.activate();
 		
@@ -1267,11 +1766,7 @@ var game = {
 		
 			this.p_time=game_tick;
 			this.state="playing"	
-			
-			//восстанавливаем жизни и количество копий
-			objects.player.set_start("sm_");
-			objects.enemy.set_start("sm_");
-			
+						
 			//ежесекундная проверка событий
 			this.sec_check=game_tick;
 			
@@ -1324,10 +1819,8 @@ var game = {
 			return;
 		}			
 		
-		
-					
-					
-		
+
+
 		
 	},
 			
@@ -1348,16 +1841,16 @@ var game = {
 				big_message.show("Поражение","Рейтинг: -1\nОпыт: +1");				
 				exp.upgrade(1);
 				my_data.rating-=1;
-				firebase.database().ref("players/" + my_data.uid+"/rating").set(my_data.rating);	
-				firebase.database().ref("players/" + my_data.uid+"/exp").set(my_data.exp);	
+				//firebase.database().ref("players/" + my_data.uid+"/rating").set(my_data.rating);	
+				//firebase.database().ref("players/" + my_data.uid+"/exp").set(my_data.exp);	
 			}
 				
 			if (res===1) {
 				exp.upgrade(3);	
 				my_data.rating+=1;
 				big_message.show("Победа","Рейтинг: +1\nОпыт: +3");					
-				firebase.database().ref("players/" + my_data.uid+"/rating").set(my_data.rating);	
-				firebase.database().ref("players/" + my_data.uid+"/exp").set(my_data.exp);	
+				//firebase.database().ref("players/" + my_data.uid+"/rating").set(my_data.rating);	
+				//firebase.database().ref("players/" + my_data.uid+"/exp").set(my_data.exp);	
 			}	
 	
 			if (res===2)
@@ -1377,15 +1870,17 @@ var game = {
 		
 	add_headshot: function(t) {
 		
-		if (t==="me") 		
+		if (t.name==="player") 		
 			anim.add_pos({obj:objects.headshot,param:'x',vis_on_end:true,func:'easeOutElastic',val:[-130, 	70],	speed:0.04});
 		
-		if (t==="opponent")		
+		if (t.name==="enemy")		
 			anim.add_pos({obj:objects.headshot,param:'x',vis_on_end:true,func:'easeOutElastic',val:[800, 	600],	speed:0.04});
 		
 		setTimeout(function(){objects.headshot.visible=false},2000);
 		
 	}
+	
+
 
 }
 
@@ -1747,10 +2242,8 @@ var user_data={
 			
 			//данные загружены и можно нажимать кнопку
 			//main_menu.unblock();
-		})
-		
+		})	
 	
-		
 	}	
 	
 }
@@ -1789,6 +2282,8 @@ var touch = {
 		if (game.state!=="playing")
 			return;
 		
+		if (objects.player.frozen===1)
+			return;
 
         this.touch_data.x0 = e.data.global.x / app.stage.scale.x;
         this.touch_data.y0 = e.data.global.y / app.stage.scale.y;
@@ -1796,9 +2291,8 @@ var touch = {
         this.touch_data.x1 = this.touch_data.x0;
         this.touch_data.y1 = this.touch_data.y0;
 
-		guide_line.visible = objects.dir_line.visible = true;
+		guide_line.visible = objects.dir_line.visible = objects.power_level_cont.visible = true;
 		
-		objects.power_level_cont.visible=true;
 		objects.power_slider.scale.x=0;
 		
 		this.p=0;
@@ -1810,6 +2304,9 @@ var touch = {
     },
 
     move: function (e) {
+		
+		if (objects.player.frozen===1)
+			return;
 
         if (drag === 1) {
             this.touch_data.x1 = e.data.global.x / app.stage.scale.x;
@@ -1822,7 +2319,7 @@ var touch = {
 			v0 = Math.max(50, Math.min(v0, 80));
 
 			this.Q = Math.atan2(dy, dx);
-			this.Q = Math.max(-0.785398, Math.min(this.Q, 0.758398));
+			this.Q = Math.max(-0.9, Math.min(this.Q, 0.758398));
 			
 			skl_anim.tween(objects.player,skl_prepare,0.5+this.Q/0.785398/2);
 
@@ -1835,8 +2332,13 @@ var touch = {
 			guide_line.moveTo(this.touch_data.x0, this.touch_data.y0);
 			guide_line.lineTo(this.touch_data.x1, this.touch_data.y1);
 			
-			objects.dir_line.x = objects.player.x+objects.player.width/2;
-			objects.dir_line.y = objects.player.y+40;
+			
+			//отображаем направляющую в зависимости от наклона тела
+			let dxv=Math.sin(objects.player.spine.rotation);
+			let dyv=-Math.cos(objects.player.spine.rotation);			
+			objects.dir_line.x = objects.player.x+objects.player.spine.x+dxv*30;
+			objects.dir_line.y = objects.player.y+objects.player.spine.y+dyv*30;
+					
 			
 			objects.dir_line.rotation=this.Q;
 
@@ -1846,28 +2348,51 @@ var touch = {
 
     up: function () {
 
-        guide_line.visible = objects.dir_line.visible = false;
+        guide_line.visible = objects.dir_line.visible = objects.power_level_cont.visible = false;
 
 		if (game.state!=="playing")
+			return;
+		
+		if (objects.player.frozen===1)
 			return;
 		
         if (drag === 0)
             return;
 		
-		objects.power_level_cont.visible=false;
 
         drag = 0;
 		
 		//запускаем локальный снаряд
-        projectiles.add(this.Q,objects.power_slider.scale.x*100+50, objects.enemy,objects.player.projectile.texture);
-		console.log(objects.power_slider.scale.x*100+50);
+        projectiles.add(this.Q,objects.power_slider.scale.x*100+50, objects.enemy,objects.player.projectile_2.texture, objects.player.projectile_power);
+		
+		//сообщаем что отрправлен мощный снаряд
+		objects.player.projectile_power==='freeze'&&(power_buttons.freeze_fired());
+		objects.player.projectile_power==='fire'&&(power_buttons.fire_fired());
+
+		
+		//убираем выделение
+		objects.upg_button_frame.visible=false;
+		objects.player.projectile_power='none';
+		
+
+		//убираем текстуры копья
+		objects.player.projectile_bcg.texture=null;
+		
 		//убираем копье и возвращаем его через некоторое время
 		objects.player.projectile.visible=false;
-		setTimeout(function(){objects.player.projectile.visible=true},500);			
+		objects.player.zz_projectile.visible=false;
+		setTimeout(function(){objects.player.projectile.visible=true;objects.player.zz_projectile.visible=true},700);			
 		
 		//запускаем анимацию
 		skl_anim.activate(0,skl_throw);
-    }
+    },
+	
+	stop: function() {
+		
+		guide_line.visible = objects.dir_line.visible = objects.power_level_cont.visible = false;
+		drag = 0;
+		
+	}
 
 }
 
@@ -1989,8 +2514,7 @@ var lb={
 }
 
 function init_game_env() {
-	
-		
+			
 	//инициируем файербейс
 	if (firebase.apps.length===0) {
 		firebase.initializeApp({
@@ -2101,8 +2625,8 @@ function init_game_env() {
     //загружаем частицы крови
     particle_engine.load();
 
-    //загружаем данные
-    user_data.load();
+	//загружаем данные
+    user_data.local();
 
     //подключаем события нажатия на поле
     objects.bcg.pointerdown = touch.down.bind(touch);
@@ -2111,9 +2635,10 @@ function init_game_env() {
 
     app.stage.addChild(guide_line, guide_line2);
 
-	fp_menu.activate();
+	//добавить фейковых игроков в базу данных
+	fp.update();
 	
-
+	main_menu.activate();
 	test_sprite=new PIXI.Graphics();
 	//app.stage.addChild(test_sprite);
 	
@@ -2137,6 +2662,10 @@ function load_resources() {
     for (var i = 0; i < load_list.length; i++)
         if (load_list[i][0] == "sprite" || load_list[i][0] == "image")
             game_res.add(load_list[i][1], "res/" + load_list[i][1] + ".png");
+		
+	//добавляем огонь
+	for (var i = 0; i < 32; i++)
+		game_res.add("fire"+i, "res/fire/image_part_0"+(i+1)+ ".png");
 
     game_res.load(init_game_env);
     game_res.onProgress.add(progress);
@@ -2178,7 +2707,7 @@ function main_loop() {
     search_opponent.process();
 	
 
-	
+	power_buttons.process();
 
 	//обработка моих событий
 	test_sprite.clear();
@@ -2191,6 +2720,8 @@ function main_loop() {
     g_process();
 
     anim.process();
+	//mini_process.process();
+	
     app.render(app.stage);
     requestAnimationFrame(main_loop);
     game_tick += 0.01666666;
