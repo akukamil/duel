@@ -2,7 +2,7 @@ var M_WIDTH = 800, M_HEIGHT = 450;
 var app, game_res, gres, objects = {}, my_data = {}, opp_data = {};
 var g_process = () => {};
 
-var any_dialog_active = 0, net_play = 0, game_platform="", money_balance = 0;
+var any_dialog_active = 0, net_play = 0, game_platform="";
 
 var guide_line = new PIXI.Graphics();
 var drag = 0, game_tick = 0, state = "";
@@ -23,6 +23,7 @@ irnd=function(min,max) {
     max = Math.floor(max);
     return Math.floor(Math.random() * (max - min + 1)) + min;
 }
+
 class lb_player_card_class extends PIXI.Container{
 	
 	constructor(x,y,place) {
@@ -1800,7 +1801,7 @@ var shop={
 		
 		objects.funny_bcg.visible=false;
 		
-		objects.shop_balance_text.text='Баланс: '+money_balance+'$';
+		objects.shop_balance_text.text='Баланс: '+my_data.money+'$';
 		
 		//устанавливаем вид и параметры текущего скина
 		this.sel_skin=objects.start_player.skin_id=objects.player.skin_id;
@@ -1884,7 +1885,7 @@ var shop={
 		
 		
 		let price=skins_powers[this.sel_skin][5];
-		if (price>money_balance) {
+		if (price>my_data.money) {
 			big_message.show('Покупка','Подожди-ка, у тебя не достаточно денег чтобы купить этого персонажа', '-------');
 			return;
 		}
@@ -1895,8 +1896,12 @@ var shop={
 		anim.add_pos({obj: objects.funny_bcg,	param: 'alpha',	vis_on_end: true,	func: 'linear',	val: [0, 1],	speed: 0.05	});
 		this.new_buy_time=game_tick;		
 		
-		money_balance-=price;
-		objects.shop_balance_text.text='Баланс: '+money_balance+'$';
+		my_data.money-=price;
+		objects.shop_balance_text.text='Баланс: '+my_data.money+'$';
+		
+		//записываем новый баланс в базу данных
+		firebase.database().ref("players/"+my_data.uid+"/money").set(my_data.money);
+		
 		
 		//присваиваем айди скина
 		objects.player.skin_id=this.sel_skin;
@@ -2262,9 +2267,12 @@ var game = {
 			}
 				
 			if (res===1) {
-				money_balance+=1;
+				my_data.money+=1;
 				big_message.show('Результат','Победа',`Рейтинг: ${my_old_rating} > ${my_data.rating}\nДеньги: +1$`);		
 				gres.win.sound.play();		
+				
+				//записываем новый баланс в базу данных
+				firebase.database().ref("players/"+my_data.uid+"/money").set(my_data.money);
 			}	
 	
 			if (res===0) {
