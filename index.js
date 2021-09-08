@@ -2620,6 +2620,9 @@ var user_data={
 				my_data.name=my_data.name || "Игрок";
 	
 			}
+			
+			//присваиваем айди моего скина
+			objects.player.skin_id=my_data.skin_id;
 
 			//обновляем рейтинг и имя в моей карточке
 			objects.player_rating_text.text=my_data.rating;	
