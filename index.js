@@ -3050,7 +3050,7 @@ function init_game_env() {
 
 
 	//добавить фейковых игроков в базу данных
-	fp.update();
+	//fp.update();
 	
 	
 	main_menu.activate();
