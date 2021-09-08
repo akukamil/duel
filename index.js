@@ -1838,14 +1838,15 @@ var shop={
 		this.new_buy_time=game_tick;		
 		
 		my_data.money-=price;
+		my_data.skin_id=this.sel_skin;
 		objects.shop_balance_text.text='Баланс: '+my_data.money+'$';
 		
 		//записываем новый баланс в базу данных
 		firebase.database().ref("players/"+my_data.uid+"/money").set(my_data.money);
-		
+		firebase.database().ref("players/"+my_data.uid+"/skin_id").set(my_data.skin_id);
 		
 		//присваиваем айди скина
-		objects.player.skin_id=this.sel_skin;
+		objects.player.skin_id=my_data.skin_id;
 		
 		
 		big_message.show('Покупка','Вы купили нового персонажа', ')))');
@@ -2540,6 +2541,7 @@ var user_data={
 				let rand_uid=Math.floor(Math.random() * 99999);
 				my_data.name 	=	rnd_names[rnd_num]+rand_uid;
 				my_data.rating=1400;
+				my_data.skin_id=0;
 				my_data.money=0;
 				my_data.uid			=	"u"+rand_uid;	
 				my_data.pic_url		=	"https://i.ibb.co/LN0NqZq/ava.jpg";	
@@ -2547,12 +2549,14 @@ var user_data={
 				document.cookie="name="+my_data.name;	
 				document.cookie="money="+my_data.money;	
 				document.cookie="pic_url="+my_data.pic_url;	
+				document.cookie="skin_id="+my_data.skin_id;	
 			
 			} else {				
 				my_data.uid=this.read_cookie("corners_player");;	
 				my_data.name=this.read_cookie("name");
 				my_data.pic_url=this.read_cookie("pic_url");
 				my_data.money=this.read_cookie("money");
+				my_data.skin_id=this.read_cookie("skin_id");
 			}
 		}		
 				
@@ -2581,11 +2585,13 @@ var user_data={
 				//если я первый раз в  игре
 				my_data.rating=1400;	
 				my_data.money=0;
+				my_data.skin_id=0;
 			}
 			else {
 				//если база данных вернула данные то все равно проверяем корректность ответа
 				my_data.rating = data.rating || 1400;
 				my_data.money=data.money || 0;
+				my_data.skin_id=data.skin_id || 0;
 			}			
 
 		}).catch((error) => {	
@@ -2610,6 +2616,7 @@ var user_data={
 				
 				my_data.rating=1400;
 				my_data.money=0;
+				my_data.skin_id=0;
 				my_data.name=my_data.name || "Игрок";
 	
 			}
@@ -2629,7 +2636,7 @@ var user_data={
 			//document.addEventListener("visibilitychange", vis_change);
 					
 			//обновляем данные в файербейс
-			firebase.database().ref("players/"+my_data.uid).set({name:my_data.name, rating: my_data.rating,money: my_data.money, pic_url: my_data.pic_url, fp:0, tm:firebase.database.ServerValue.TIMESTAMP});
+			firebase.database().ref("players/"+my_data.uid).set({name:my_data.name, rating: my_data.rating,money: my_data.money, skin_id: my_data.skin_id, pic_url: my_data.pic_url, fp:0, tm:firebase.database.ServerValue.TIMESTAMP});
 			
 			//данные загружены и можно нажимать кнопку
 			//main_menu.unblock();
