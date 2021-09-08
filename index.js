@@ -1871,7 +1871,7 @@ var shop={
 	
 }
 
-var	show_ad={
+var	show_ad=function(){
 		
 	if (game_platform==="YANDEX") {			
 		//показываем рекламу
