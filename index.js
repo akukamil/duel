@@ -957,7 +957,7 @@ var search_opponent = {
 			
 		}
 
-        objects.search_opponent_progress.rotation += 0.1;
+        objects.search_opponent_progress.rotation += 0.3;
     },
 
 	found: function () {
