@@ -893,7 +893,7 @@ var search_opponent = {
 		//это время когда начали поиска
 		this.start_wait_time=game_tick;		
 		this.found_ok=0;
-		this.wait_time=3;//Math.random()*10+2;
+		this.wait_time=Math.random()*5+2;
 		state="idle";
 
 		//устанавливаем процессинговую функцию
@@ -1871,6 +1871,50 @@ var shop={
 	
 }
 
+var	show_ad={
+		
+	if (game_platform==="YANDEX") {			
+		//показываем рекламу
+		window.ysdk.adv.showFullscreenAdv({
+		  callbacks: {
+			onClose: function() {}, 
+			onError: function() {}
+					}
+		})
+	}
+	
+	if (game_platform==="VK_WEB") {
+				 
+		admanInit(
+		
+			{
+			  user_id: my_data.uid.substring(2),
+			  app_id: 7885384,
+			  type: 'preloader'   
+			},
+		
+		
+			function onAdsReady(adman) {
+			  adman.onStarted(function () {});
+			  adman.onCompleted(function() {});          
+			  adman.onSkipped(function() {});          
+			  adman.onClicked(function() {});
+			  adman.start('preroll');
+			},							
+			
+			function onNoAds() {}
+		);		
+	}		
+			
+	if (game_platform==="VK_MINIAPP") {
+				 
+		vkBridge.send("VKWebAppShowNativeAds", {ad_format:"preloader"})
+		.then(data => console.log(data.result))
+		.catch(error => console.log(error));
+	}
+	
+}
+
 var power_buttons = {
 		
 	selected_power: 'none',
@@ -2203,13 +2247,13 @@ var game = {
 			firebase.database().ref("players/" + opp_data.uid+"/rating").set(opp_data.rating);	
 		
 			if (res===-1) {
-				big_message.show('Результат','Поражение',`Рейтинг: ${my_old_rating} > ${my_data.rating}`);				
+				big_message.show('Результат','Поражение',`Рейтинг: ${my_old_rating} > ${my_data.rating}`,function(){show_ad()});				
 				gres.lose.sound.play();
 			}
 				
 			if (res===1) {
 				my_data.money+=1;
-				big_message.show('Результат','Победа',`Рейтинг: ${my_old_rating} > ${my_data.rating}\nДеньги: +1$`);		
+				big_message.show('Результат','Победа',`Рейтинг: ${my_old_rating} > ${my_data.rating}\nДеньги: +1$`,function(){show_ad()});		
 				gres.win.sound.play();		
 				
 				//записываем новый баланс в базу данных
@@ -2217,7 +2261,7 @@ var game = {
 			}	
 	
 			if (res===0) {
-				big_message.show('Результат','Ничья',`Рейтинг: ${my_old_rating} > ${my_data.rating}`);				
+				big_message.show('Результат','Ничья',`Рейтинг: ${my_old_rating} > ${my_data.rating}`,function(){show_ad()});				
 				gres.lose.sound.play();
 			}
 			
