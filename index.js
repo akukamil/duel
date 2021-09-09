@@ -2851,7 +2851,7 @@ var lb={
 			VK.callMethod("showSettingsBox", +256);
 		
 		if (game_platform==='VK_MINIAPP')
-			VK.callMethod("showSettingsBox", +256);
+			vkBridge.send('VKWebAppAddToFavorites');
 		
 		this.add_game_to_vk_menu_shown=1;
 		
