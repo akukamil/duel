@@ -1715,6 +1715,12 @@ var main_menu = {
 
 		if (skl_anim.slots[2].on===0)
 			skl_anim.tween(objects.start_player,skl_prepare,Math.sin(game_tick*this.tween_spd)*0.5+0.5);
+	},
+	
+	invite_friends_down: function() {
+		
+		if (platform==='VK_WEB')
+			VK.callMethod("showInviteBox");
 	}
 	
 }
