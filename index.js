@@ -1725,7 +1725,7 @@ var main_menu = {
 			VK.callMethod("showInviteBox");
 		
 		if (game_platform==='VK_MINIAPP')
-			vkBridge.send('showInviteBox');
+			vkBridge.send('VKWebAppShowInviteBox');
 	}
 	
 }
@@ -2842,11 +2842,18 @@ var lb={
 		
 		gres.close.sound.play();
 		
+		
+		//показываем меню по выводу игры в меню
+		if (this.add_game_to_vk_menu_shown===1)
+			return;
+		
 		if (game_platform==='VK_WEB')
 			VK.callMethod("showSettingsBox", +256);
 		
 		if (game_platform==='VK_MINIAPP')
 			VK.callMethod("showSettingsBox", +256);
+		
+		this.add_game_to_vk_menu_shown=1;
 		
 	},
 	
