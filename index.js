@@ -1886,25 +1886,9 @@ var	show_ad=function(){
 	
 	if (game_platform==="VK_WEB") {
 				 
-		admanInit(
-		
-			{
-			  user_id: my_data.uid.substring(2),
-			  app_id: 7885384,
-			  type: 'preloader'   
-			},
-		
-		
-			function onAdsReady(adman) {
-			  adman.onStarted(function () {});
-			  adman.onCompleted(function() {});          
-			  adman.onSkipped(function() {});          
-			  adman.onClicked(function() {});
-			  adman.start('preroll');
-			},							
-			
-			function onNoAds() {}
-		);		
+		vkBridge.send("VKWebAppShowNativeAds", {ad_format:"preloader"})
+		.then(data => console.log(data.result))
+		.catch(error => console.log(error));	
 	}		
 			
 	if (game_platform==="VK_MINIAPP") {
@@ -2368,6 +2352,7 @@ var user_data={
 				this.loadScript('https://vk.com/js/api/xd_connection.js?2'),
 				this.loadScript('//ad.mail.ru/static/admanhtml/rbadman-html5.min.js'),
 				this.loadScript('//vk.com/js/api/adman_init.js')
+				this.loadScript('https://unpkg.com/@vkontakte/vk-bridge/dist/browser.min.js')	
 				
 			]).then(function(){
 				user_data.vk_web()
@@ -2382,6 +2367,7 @@ var user_data={
 				this.loadScript('https://vk.com/js/api/xd_connection.js?2'),
 				this.loadScript('//ad.mail.ru/static/admanhtml/rbadman-html5.min.js'),
 				this.loadScript('//vk.com/js/api/adman_init.js')
+				this.loadScript('https://unpkg.com/@vkontakte/vk-bridge/dist/browser.min.js')	
 				
 			]).then(function(){
 				user_data.vk_web()
