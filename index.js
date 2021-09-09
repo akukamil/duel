@@ -1721,11 +1721,14 @@ var main_menu = {
 	
 	invite_friends_down: function() {
 		
-		if (game_platform==='VK_WEB')
+		if (game_platform==='VK_WEB' || game_platform==='VK_MINIAPP')
 			vkBridge.send('VKWebAppShowInviteBox');
+	},
+	
+	vk_group_down: function() {
 		
-		if (game_platform==='VK_MINIAPP')
-			vkBridge.send('VKWebAppShowInviteBox');
+		if (game_platform==='VK_WEB' || game_platform==='VK_MINIAPP')
+			vkBridge.send('VKWebAppJoinGroup', {"group_id": 59771306});
 	}
 	
 }
