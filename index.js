@@ -1722,7 +1722,7 @@ var main_menu = {
 	invite_friends_down: function() {
 		
 		if (game_platform==='VK_WEB')
-			VK.callMethod("showInviteBox");
+			vkBridge.send('VKWebAppShowInviteBox');
 		
 		if (game_platform==='VK_MINIAPP')
 			vkBridge.send('VKWebAppShowInviteBox');
