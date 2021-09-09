@@ -3066,7 +3066,7 @@ function init_game_env() {
     particle_engine.load();
 
 	//загружаем данные
-    user_data.local();
+    user_data.load();
 
     //подключаем события нажатия на поле
     objects.bcg.pointerdown = touch.down.bind(touch);
@@ -3093,8 +3093,8 @@ function load_resources() {
     game_res = new PIXI.Loader();
 	
 	
-	//let git_src="https://akukamil.github.io/duel/"
-	let git_src=""
+	let git_src="https://akukamil.github.io/duel/"
+	//let git_src=""
 	
 	
 	game_res.add('receive_move',git_src+'sounds/receive_move.mp3');
