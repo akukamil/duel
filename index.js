@@ -1719,7 +1719,7 @@ var main_menu = {
 	
 	invite_friends_down: function() {
 		
-		if (platform==='VK_WEB')
+		if (game_platform==='VK_WEB')
 			VK.callMethod("showInviteBox");
 	}
 	
