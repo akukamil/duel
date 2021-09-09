@@ -1620,7 +1620,7 @@ var main_menu = {
 		g_process=function(){main_menu.process()};
 		
 		
-		big_message.show('Привет','Добро пожаловать', ')))',null,true);
+		//big_message.show('Привет','Добро пожаловать', ')))',null,true);
 		
 		
 	},
