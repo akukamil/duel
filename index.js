@@ -883,7 +883,7 @@ var cut_string = function(s,f_size, max_width) {
 var search_opponent = {
 
 	found_ok: 0,
-	wait_time:0,
+	wait_time:0,	
 	start_wait_time:0,
 	rating_vs_opponents:[[-99999,1500,0,7],[1600,1700,3,10],[1700,1800,6,13],[1800,1900,9,16],[1900,99999,12,19]],
 
@@ -895,6 +895,8 @@ var search_opponent = {
 		this.found_ok=0;
 		this.wait_time=Math.random()*5+2;
 		state="idle";
+		
+		
 
 		//устанавливаем процессинговую функцию
 		g_process=function(){search_opponent.process()};
@@ -1721,6 +1723,9 @@ var main_menu = {
 		
 		if (game_platform==='VK_WEB')
 			VK.callMethod("showInviteBox");
+		
+		if (game_platform==='VK_MINIAPP')
+			vkBridge.send('showInviteBox');
 	}
 	
 }
@@ -2083,7 +2088,7 @@ var game = {
 	sec_check:0,
 	h_data:[0,0],
 	cur_round: 0,
-	block_start_time: 0,
+	block_start_time: 0,	
     process: function () {},
 
     activate: function () {
@@ -2800,7 +2805,7 @@ var touch = {
 
 var lb={
 	
-	
+	add_game_to_vk_menu_shown:0,
 	cards_pos: [[370,10],[380,70],[390,130],[380,190],[360,250],[330,310],[290,370]],
 	
 	activate: function() {
@@ -2828,8 +2833,7 @@ var lb={
 	},
 	
 	close: function() {
-		
-		
+				
 		objects.lb_1_cont.visible=false;
 		objects.lb_2_cont.visible=false;
 		objects.lb_3_cont.visible=false;
@@ -2837,6 +2841,12 @@ var lb={
 		objects.lb_back_button.visible=false;
 		
 		gres.close.sound.play();
+		
+		if (game_platform==='VK_WEB')
+			VK.callMethod("showSettingsBox", +256);
+		
+		if (game_platform==='VK_MINIAPP')
+			VK.callMethod("showSettingsBox", +256);
 		
 	},
 	
