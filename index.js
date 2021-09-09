@@ -1244,7 +1244,8 @@ var big_message={
 		//отображается ли кнопка поделиться
 		if (game_platform==='VK_WEB' || game_platform==='VK_MINIAPP')
 			objects.publish_vk_button.visible=public_vis
-
+		else
+			objects.publish_vk_button.visible=false
 
 		if (text2!==undefined || text2!=="")
 			objects.big_message_text2.text=text2;
@@ -1620,9 +1621,6 @@ var main_menu = {
 		g_process=function(){main_menu.process()};
 		
 		
-		//big_message.show('Привет','Добро пожаловать', ')))',null,true);
-		
-		
 	},
 	
 	play_button_down: function() {
@@ -1734,11 +1732,21 @@ var main_menu = {
 	
 	invite_friends_down: function() {
 		
+        if (objects.main_buttons_cont.ready === false || any_dialog_active===1) {
+			gres.locked.sound.play();
+            return;
+		}
+		
 		if (game_platform==='VK_WEB' || game_platform==='VK_MINIAPP')
 			vkBridge.send('VKWebAppShowInviteBox');
 	},
 	
 	vk_group_down: function() {
+		
+        if (objects.main_buttons_cont.ready === false || any_dialog_active===1) {
+			gres.locked.sound.play();
+            return;
+		}
 		
 		if (game_platform==='VK_WEB' || game_platform==='VK_MINIAPP')
 			vkBridge.send('VKWebAppJoinGroup', {"group_id": 59771306});
