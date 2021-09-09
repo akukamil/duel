@@ -2848,7 +2848,7 @@ var lb={
 			return;
 		
 		if (game_platform==='VK_WEB')
-			VK.callMethod("showSettingsBox", +256);
+			vkBridge.send('VKWebAppAddToFavorites');
 		
 		if (game_platform==='VK_MINIAPP')
 			vkBridge.send('VKWebAppAddToFavorites');
