@@ -1237,17 +1237,21 @@ var big_message={
 	
 	callback_func: function(){},
 	
-	show: function(header,text,text2,callback) {
+	show: function(header,text,text2,callback, public_vis) {
 		
 		any_dialog_active=1;
-		
+
+		//отображается ли кнопка поделиться
+		if (game_platform==='VK_WEB' || game_platform==='VK_MINIAPP')
+			objects.publish_vk_button.visible=public_vis
+
 
 		if (text2!==undefined || text2!=="")
 			objects.big_message_text2.text=text2;
 		else
 			objects.big_message_text2.text='**********';
 		
-		if (callback===undefined)
+		if (callback===undefined || callback===null)
 			this.callback_func=()=>{};
 		else
 			this.callback_func=callback;
@@ -1274,7 +1278,13 @@ var big_message={
 		any_dialog_active=0;
 		anim.add_pos({obj:objects.big_message_cont,param:'y',vis_on_end:false,func:'easeInBack',val:['sy', 	450],	speed:0.05});
 		
-	}	
+	},
+	
+	publish_vk: function() {
+		
+		vkBridge.send('VKWebAppShowWallPostBox', {"message": "Я одержал победу над опытным соперником!"});
+		
+	}
 }
 
 var process_collisions=function() {
@@ -1610,6 +1620,9 @@ var main_menu = {
 		g_process=function(){main_menu.process()};
 		
 		
+		big_message.show('Привет','Добро пожаловать', ')))',null,true);
+		
+		
 	},
 	
 	play_button_down: function() {
@@ -1841,7 +1854,7 @@ var shop={
 		
 		let price=skins_powers[this.sel_skin][5];
 		if (price>my_data.money) {
-			big_message.show('Покупка','Подожди-ка, у тебя не достаточно денег чтобы купить этого персонажа', '-------');
+			big_message.show('Покупка','Подожди-ка, у тебя не достаточно денег чтобы купить этого персонажа', '-------',null,false);
 			return;
 		}
 		
@@ -1863,7 +1876,7 @@ var shop={
 		objects.player.skin_id=my_data.skin_id;
 		
 		
-		big_message.show('Покупка','Вы купили нового персонажа', ')))');
+		big_message.show('Покупка','Вы купили нового персонажа', ')))',null,false);
 		
 	},
 	
@@ -2246,13 +2259,13 @@ var game = {
 			firebase.database().ref("players/" + opp_data.uid+"/rating").set(opp_data.rating);	
 		
 			if (res===-1) {
-				big_message.show('Результат','Поражение',`Рейтинг: ${my_old_rating} > ${my_data.rating}`,function(){show_ad()});				
+				big_message.show('Результат','Поражение',`Рейтинг: ${my_old_rating} > ${my_data.rating}`,function(){show_ad()},false);				
 				gres.lose.sound.play();
 			}
 				
 			if (res===1) {
 				my_data.money+=1;
-				big_message.show('Результат','Победа',`Рейтинг: ${my_old_rating} > ${my_data.rating}\nДеньги: +1$`,function(){show_ad()});		
+				big_message.show('Результат','Победа',`Рейтинг: ${my_old_rating} > ${my_data.rating}\nДеньги: +1$`,function(){show_ad()},true);		
 				gres.win.sound.play();		
 				
 				//записываем новый баланс в базу данных
@@ -2531,7 +2544,7 @@ var user_data={
 		//если не получилось авторизоваться в социальной сети то ищем куки
 		if (user_data.req_result!=="ok") {		
 		
-			big_message.show('Упс...','Ошибка авторизации. Попробуйте перезапустить игру','(((')
+			big_message.show('Упс...','Ошибка авторизации. Попробуйте перезапустить игру','(((',null,false)
 		
 			let c_player_uid=this.read_cookie("pic_url");
 			if (c_player_uid===undefined) {
@@ -2601,7 +2614,7 @@ var user_data={
 			
 			//сделаем сдесь защиту от неопределенности
 			if (my_data.rating===undefined || my_data.name===undefined) {
-				big_message.show('Упс..','Не получилось загрузить Ваши данные. Попробуйте перезапустить игру','(((')
+				big_message.show('Упс..','Не получилось загрузить Ваши данные. Попробуйте перезапустить игру','(((',null,false)
 				
 				
 				let keep_id=my_data.uid;
@@ -3053,7 +3066,7 @@ function init_game_env() {
     particle_engine.load();
 
 	//загружаем данные
-    user_data.load();
+    user_data.local();
 
     //подключаем события нажатия на поле
     objects.bcg.pointerdown = touch.down.bind(touch);
@@ -3080,8 +3093,8 @@ function load_resources() {
     game_res = new PIXI.Loader();
 	
 	
-	let git_src="https://akukamil.github.io/duel/"
-	//let git_src=""
+	//let git_src="https://akukamil.github.io/duel/"
+	let git_src=""
 	
 	
 	game_res.add('receive_move',git_src+'sounds/receive_move.mp3');
