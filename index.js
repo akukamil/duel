@@ -1237,15 +1237,10 @@ var big_message={
 	
 	callback_func: function(){},
 	
-	show: function(header,text,text2,callback, public_vis) {
+	show: function(header,text,text2,callback) {
 		
 		any_dialog_active=1;
 
-		//отображается ли кнопка поделиться
-		if (game_platform==='VK_WEB' || game_platform==='VK_MINIAPP')
-			objects.publish_vk_button.visible=public_vis
-		else
-			objects.publish_vk_button.visible=false
 
 		if (text2!==undefined || text2!=="")
 			objects.big_message_text2.text=text2;
@@ -1859,7 +1854,7 @@ var shop={
 		
 		let price=skins_powers[this.sel_skin][5];
 		if (price>my_data.money) {
-			big_message.show('Покупка','Подожди-ка, у тебя не достаточно денег чтобы купить этого персонажа', '-------',null,false);
+			big_message.show('Покупка','Подожди-ка, у тебя не достаточно денег чтобы купить этого персонажа', '-------',null);
 			return;
 		}
 		
@@ -1881,7 +1876,7 @@ var shop={
 		objects.player.skin_id=my_data.skin_id;
 		
 		
-		big_message.show('Покупка','Вы купили нового персонажа', ')))',null,false);
+		big_message.show('Покупка','Вы купили нового персонажа', ')))',null);
 		
 	},
 	
@@ -2264,13 +2259,13 @@ var game = {
 			firebase.database().ref("players/" + opp_data.uid+"/rating").set(opp_data.rating);	
 		
 			if (res===-1) {
-				big_message.show('Результат','Поражение',`Рейтинг: ${my_old_rating} > ${my_data.rating}`,function(){show_ad()},false);				
+				big_message.show('Результат','Поражение',`Рейтинг: ${my_old_rating} > ${my_data.rating}`,function(){show_ad()});				
 				gres.lose.sound.play();
 			}
 				
 			if (res===1) {
 				my_data.money+=1;
-				big_message.show('Результат','Победа',`Рейтинг: ${my_old_rating} > ${my_data.rating}\nДеньги: +1$`,function(){show_ad()},true);		
+				big_message.show('Результат','Победа',`Рейтинг: ${my_old_rating} > ${my_data.rating}\nДеньги: +1$`,function(){show_ad()});		
 				gres.win.sound.play();		
 				
 				//записываем новый баланс в базу данных
@@ -2549,7 +2544,7 @@ var user_data={
 		//если не получилось авторизоваться в социальной сети то ищем куки
 		if (user_data.req_result!=="ok") {		
 		
-			big_message.show('Упс...','Ошибка авторизации. Попробуйте перезапустить игру','(((',null,false)
+			big_message.show('Упс...','Ошибка авторизации. Попробуйте перезапустить игру','(((',null)
 		
 			let c_player_uid=this.read_cookie("pic_url");
 			if (c_player_uid===undefined) {
@@ -2619,7 +2614,7 @@ var user_data={
 			
 			//сделаем сдесь защиту от неопределенности
 			if (my_data.rating===undefined || my_data.name===undefined) {
-				big_message.show('Упс..','Не получилось загрузить Ваши данные. Попробуйте перезапустить игру','(((',null,false)
+				big_message.show('Упс..','Не получилось загрузить Ваши данные. Попробуйте перезапустить игру','(((',null)
 				
 				
 				let keep_id=my_data.uid;
