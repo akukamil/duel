@@ -1279,13 +1279,9 @@ var big_message={
 		any_dialog_active=0;
 		anim.add_pos({obj:objects.big_message_cont,param:'y',vis_on_end:false,func:'easeInBack',val:['sy', 	450],	speed:0.05});
 		
-	},
-	
-	publish_vk: function() {
-		
-		vkBridge.send('VKWebAppShowWallPostBox', {"message": "Я одержал победу над опытным соперником!"});
-		
 	}
+	
+
 }
 
 var process_collisions=function() {
@@ -1614,6 +1610,7 @@ var main_menu = {
 		//устанавливаем фон
 		objects.bcg.texture=game_res.resources["bcg"].texture;
 
+
 		
 		this.start_time=game_tick;
 		
@@ -1741,7 +1738,7 @@ var main_menu = {
 			vkBridge.send('VKWebAppShowInviteBox');
 	},
 	
-	vk_group_down: function() {
+	vk_post_down: function() {
 		
         if (objects.main_buttons_cont.ready === false || any_dialog_active===1) {
 			gres.locked.sound.play();
@@ -1749,7 +1746,7 @@ var main_menu = {
 		}
 		
 		if (game_platform==='VK_WEB' || game_platform==='VK_MINIAPP')
-			vkBridge.send('VKWebAppJoinGroup', {"group_id": 59771306});
+			vkBridge.send('VKWebAppShowWallPostBox', {"message": "Я одержал победу над опытным соперником!"});
 	}
 	
 }
@@ -2654,16 +2651,24 @@ var user_data={
 			
 			//keep-alive сервис
 			setInterval(function()	{keep_alive()}, 40000);
-				
 
 			//это событие когда меняется видимость приложения
 			//document.addEventListener("visibilitychange", vis_change);
 					
 			//обновляем данные в файербейс
 			firebase.database().ref("players/"+my_data.uid).set({name:my_data.name, rating: my_data.rating,money: my_data.money, skin_id: my_data.skin_id, pic_url: my_data.pic_url, fp:0, tm:firebase.database.ServerValue.TIMESTAMP});
+								
+			//устанавливаем данные в попап
+			objects.popup_avatar.texture=objects.player_avatar.texture
+			objects.popup_rating_text.text=objects.player_rating_text.text;	
+			objects.popup_name_text.text=objects.player_name_text.text;	
 			
-			//данные загружены и можно нажимать кнопку
-			//main_menu.unblock();
+			//показываем попап с данными игрока
+			anim.add_pos({obj: objects.popup_card_cont,	param: 'y',	vis_on_end: true,	func: 'easeOutCubic',	val: [-300, 'sy'],	speed: 0.05	});
+			
+			setTimeout(function(){anim.add_pos({obj: objects.popup_card_cont,	param: 'y',	vis_on_end: true,	func: 'easeInCubic',	val: ['sy', -300],	speed: 0.05	});},3000);
+			
+			
 		})	
 	
 	}	
