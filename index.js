@@ -2614,8 +2614,6 @@ var user_data={
 			
 			//сделаем сдесь защиту от неопределенности
 			if (my_data.rating===undefined || my_data.name===undefined) {
-				big_message.show('Упс..','Не получилось загрузить Ваши данные. Попробуйте перезапустить игру','(((',null)
-				
 				
 				let keep_id=my_data.uid;
 				if (my_data.rating===undefined)
