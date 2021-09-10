@@ -3055,7 +3055,6 @@ function init_game_env() {
             break;
 
         case "cont":	
-		
 	        eval(load_list[i][3]);
             break;
 
