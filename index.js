@@ -1741,7 +1741,7 @@ var main_menu = {
 		}
 		
 		if (game_platform==='VK_WEB' || game_platform==='VK_MINIAPP')
-			vkBridge.send('VKWebAppShowWallPostBox', {"message": "Я одержал победу над опытным соперником!"});
+			vkBridge.send('VKWebAppShowWallPostBox', {"message": `Мой рейтинг в игре Стикмэны-Дуэль ${my_data.rating}. А сколько наберешь ты?`});
 	}
 	
 }
