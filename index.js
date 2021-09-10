@@ -2,7 +2,7 @@ var M_WIDTH = 800, M_HEIGHT = 450;
 var app, game_res, gres, objects = {}, my_data = {}, opp_data = {};
 var g_process = () => {};
 
-var any_dialog_active = 0, net_play = 0, game_platform="";
+var any_dialog_active = 1, net_play = 0, game_platform="";
 
 var guide_line = new PIXI.Graphics();
 var drag = 0, game_tick = 0, state = "";
@@ -2663,6 +2663,8 @@ var user_data={
 			
 			setTimeout(function(){anim.add_pos({obj: objects.popup_card_cont,	param: 'y',	vis_on_end: true,	func: 'easeInCubic',	val: ['sy', -300],	speed: 0.05	});},3000);
 			
+			//указываем что можно нажимать на кнопки
+			any_dialog_active = 0;
 			
 		})	
 	
