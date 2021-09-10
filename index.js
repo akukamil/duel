@@ -2,7 +2,7 @@ var M_WIDTH = 800, M_HEIGHT = 450;
 var app, game_res, gres, objects = {}, my_data = {}, opp_data = {};
 var g_process = () => {};
 
-var any_dialog_active = 1, net_play = 0, game_platform="";
+var any_dialog_active = 0, net_play = 0, game_platform="";
 
 var guide_line = new PIXI.Graphics();
 var drag = 0, game_tick = 0, state = "";
@@ -884,6 +884,7 @@ var search_opponent = {
 
 	found_ok: 0,
 	wait_time:0,	
+	user_date_complete: 0,
 	start_wait_time:0,
 	rating_vs_opponents:[[-99999,1500,0,7],[1600,1700,3,10],[1700,1800,6,13],[1800,1900,9,16],[1900,99999,12,19]],
 
@@ -954,7 +955,7 @@ var search_opponent = {
 		
 		if (game_tick>this.start_wait_time + this.wait_time){
 			
-			if (this.found_ok===1)
+			if (this.found_ok===1 && this.user_date_complete===1)
 				this.found();	
 			
 		}
@@ -2574,7 +2575,7 @@ var user_data={
 				
 		//если с аватаркой какие-то проблемы то ставим дефолтную
 		if (my_data.pic_url===undefined || my_data.pic_url=="")
-			my_data.pic_url	="https://i.ibb.co/LN0NqZq/ava.jpg";
+			my_data.pic_url	= "https://i.ibb.co/LN0NqZq/ava.jpg";
 		
 		//загружаем мою аватарку на табло хотя его пока не видно
 		let loader2 = new PIXI.Loader();
@@ -2597,7 +2598,7 @@ var user_data={
 	init_firebase: function() {
 		
 		
-			//запрашиваем мою информацию из бд или заносим в бд новые данные если игрока нет в бд
+		//запрашиваем мою информацию из бд или заносим в бд новые данные если игрока нет в бд
 		firebase.database().ref("players/"+my_data.uid).once('value').then((snapshot) => {		
 						
 			var data=snapshot.val();
@@ -2668,8 +2669,8 @@ var user_data={
 			
 			setTimeout(function(){anim.add_pos({obj: objects.popup_card_cont,	param: 'y',	vis_on_end: true,	func: 'easeInCubic',	val: ['sy', -300],	speed: 0.05	});},3000);
 			
-			//указываем что можно нажимать на кнопки
-			any_dialog_active = 0;
+			//указываем что данные загружены
+			search_opponent.user_date_complete=1;
 			
 		})	
 	
