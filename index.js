@@ -2361,7 +2361,6 @@ var user_data={
 		
 		let s=window.location.href;
 
-
 		if (s.includes("yandex")) {
 						
 			Promise.all([
@@ -2581,6 +2580,14 @@ var user_data={
 		let loader2 = new PIXI.Loader();
 		loader2.add('my_avatar', my_data.pic_url,{loadType: PIXI.loaders.Resource.LOAD_TYPE.IMAGE});
 		loader2.load((loader, resources) => {objects.player_avatar.texture = resources.my_avatar.texture;});				
+					
+					
+		//показываем кнопки вконтакте если мы в этой соц. сети
+		if (game_platform==='VK_WEB' || game_platform==='VK_MINIAPP') {
+			objects.invite_friends_button.visible=true;
+			objects.vk_post_button.visible=true;
+		}
+					
 					
 		//загружаем файербейс
 		this.init_firebase();	
