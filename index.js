@@ -2546,8 +2546,8 @@ var user_data={
 		
 			console.log('Ошибка авторизации в соц сети. Смотрим в локальном хранилище.');
 		
-			let c_player_uid=localStorage.getItem('corners_player');
-			if (c_player_uid===undefined) {
+			let c_player_uid=localStorage.getItem('uid');
+			if (c_player_uid===undefined || c_player_uid===null) {
 				
 				let rnd_names=["Бегемот","Жираф","Зебра","Тигр","Ослик","Мамонт","Слон","Енот","Кролик","Бизон","Пантера"];
 				let rnd_num=Math.floor(Math.random()*rnd_names.length)
@@ -2558,14 +2558,14 @@ var user_data={
 				my_data.money=0;
 				my_data.uid			=	"u"+rand_uid;	
 				my_data.pic_url		=	"https://i.ibb.co/LN0NqZq/ava.jpg";	
-				localStorage.setItem('corners_player',my_data.uid);		
+				localStorage.setItem('uid',my_data.uid);		
 				localStorage.setItem('name',my_data.name);	
 				localStorage.setItem('money',my_data.money);	
 				localStorage.setItem('pic_url',my_data.pic_url);	
 				localStorage.setItem('skin_id',my_data.skin_id);	
 			
 			} else {				
-				my_data.uid=localStorage.getItem('corners_player');
+				my_data.uid=localStorage.getItem('uid');
 				my_data.name=localStorage.getItem('name');
 				my_data.pic_url=localStorage.getItem('pic_url');
 				my_data.money=localStorage.getItem('money');
