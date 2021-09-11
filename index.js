@@ -2544,7 +2544,7 @@ var user_data={
 		//если не получилось авторизоваться в социальной сети то ищем куки
 		if (user_data.req_result!=="ok") {		
 		
-			big_message.show('Упс...','Ошибка авторизации. Попробуйте перезапустить игру','(((',null)
+			console.log('Ошибка авторизации. Попробуйте перезапустить игру');
 		
 			let c_player_uid=this.read_cookie("pic_url");
 			if (c_player_uid===undefined) {
