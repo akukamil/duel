@@ -2544,7 +2544,7 @@ var user_data={
 		//если не получилось авторизоваться в социальной сети то ищем куки
 		if (user_data.req_result!=="ok") {		
 		
-			console.log('Ошибка авторизации. Попробуйте перезапустить игру');
+			console.log('Ошибка авторизации в соц сети. Смотрим в локальном хранилище.');
 		
 			let c_player_uid=this.read_cookie("pic_url");
 			if (c_player_uid===undefined) {
@@ -2558,18 +2558,18 @@ var user_data={
 				my_data.money=0;
 				my_data.uid			=	"u"+rand_uid;	
 				my_data.pic_url		=	"https://i.ibb.co/LN0NqZq/ava.jpg";	
-				document.cookie="corners_player="+	my_data.uid;		
-				document.cookie="name="+my_data.name;	
-				document.cookie="money="+my_data.money;	
-				document.cookie="pic_url="+my_data.pic_url;	
-				document.cookie="skin_id="+my_data.skin_id;	
+				localStorage.setItem('corners_player',my_data.uid);		
+				localStorage.setItem('name',my_data.name);	
+				localStorage.setItem('money',my_data.money);	
+				localStorage.setItem('pic_url',my_data.pic_url);	
+				localStorage.setItem('skin_id',my_data.skin_id);	
 			
 			} else {				
-				my_data.uid=this.read_cookie("corners_player");;	
-				my_data.name=this.read_cookie("name");
-				my_data.pic_url=this.read_cookie("pic_url");
-				my_data.money=this.read_cookie("money");
-				my_data.skin_id=this.read_cookie("skin_id");
+				my_data.uid=localStorage.getItem('corners_player');
+				my_data.name=localStorage.getItem('name');
+				my_data.pic_url=localStorage.getItem('pic_url');
+				my_data.money=localStorage.getItem('money');
+				my_data.skin_id=localStorage.getItem('skin_id');
 			}
 		}		
 				
