@@ -2546,7 +2546,7 @@ var user_data={
 		
 			console.log('Ошибка авторизации в соц сети. Смотрим в локальном хранилище.');
 		
-			let c_player_uid=this.read_cookie("pic_url");
+			let c_player_uid=localStorage.getItem('corners_player');
 			if (c_player_uid===undefined) {
 				
 				let rnd_names=["Бегемот","Жираф","Зебра","Тигр","Ослик","Мамонт","Слон","Енот","Кролик","Бизон","Пантера"];
