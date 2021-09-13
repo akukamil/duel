@@ -1580,7 +1580,6 @@ var anim = {
 var keep_alive= function() {
 			
 	firebase.database().ref("players/"+my_data.uid+"/tm").set(firebase.database.ServerValue.TIMESTAMP);
-	firebase.database().ref("states/"+my_data.uid).onDisconnect().remove();
 
 }
 
@@ -2321,20 +2320,7 @@ var user_data={
 		
 	// эта функция вызывается один раз в начале игры
 	req_result: "",
-	yndx_no_personal_data:0,
-	fb_error:0,
-	
-	read_cookie: function(name) {
-		var nameEQ = name + "=";
-		var ca = document.cookie.split(';');
-		for(var i=0;i < ca.length;i++) {
-			var c = ca[i];
-			while (c.charAt(0)==' ') c = c.substring(1,c.length);
-			if (c.indexOf(nameEQ) == 0) return c.substring(nameEQ.length,c.length);
-		}
-		return undefined;
-	},
-	
+		
 	loadScript : function(src) {
 	  return new Promise((resolve, reject) => {
 		const script = document.createElement('script')
@@ -2532,7 +2518,7 @@ var user_data={
 
 	local: function() {	
 	
-		let uid = prompt('Введите ID', 100);
+		let uid = prompt('Локальная обстановка. Введите ID', 100);
 		
 		this.req_result='ok'		
 		my_data.name="Local" + uid;
