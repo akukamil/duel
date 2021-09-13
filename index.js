@@ -2160,7 +2160,6 @@ var game = {
 		//устанавливаем состояния
 		state = "online";
 		this.state="online";			
-		firebase.database().ref("states/" + my_data.uid).set(state);
 
 		g_process = function(){};	
 	
@@ -2273,8 +2272,7 @@ var game = {
 			}	
 	
 			if (res===0) {
-				big_message.show('Результат','Ничья',`Рейтинг: ${my_old_rating} > ${my_data.rating}`,function(){show_ad()});				
-				gres.lose.sound.play();
+
 			}
 			
 
@@ -2314,6 +2312,13 @@ var stop_my_movements = function () {
     guide_line.clear();
     guide_line.visible = false;
     drag = 0;
+}
+
+function vis_change() {
+	
+	if (document.hidden===true) {
+		game.process_finish_game(1,0);
+	}	
 }
 
 var user_data={
@@ -2654,7 +2659,7 @@ var user_data={
 			setInterval(function()	{keep_alive()}, 40000);
 
 			//это событие когда меняется видимость приложения
-			//document.addEventListener("visibilitychange", vis_change);
+			document.addEventListener("visibilitychange", vis_change);
 					
 			//обновляем данные в файербейс
 			firebase.database().ref("players/"+my_data.uid).set({name:my_data.name, rating: my_data.rating,money: my_data.money, skin_id: my_data.skin_id, pic_url: my_data.pic_url, fp:0, tm:firebase.database.ServerValue.TIMESTAMP});
