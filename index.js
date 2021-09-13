@@ -1859,6 +1859,11 @@ var shop={
 			return;
 		}
 		
+		if (objects.player.skin_id===my_data.skin_id) {
+			big_message.show('Покупка','Вы уже приобрели данного персонажа', '-------',null);
+			gres.locked.sound.play();
+			return;
+		}
 				
 		gres.upgrade.sound.play();
 				
