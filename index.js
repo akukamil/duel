@@ -2417,8 +2417,12 @@ var user_data={
 			return;
 		}
 
-		//это если игра запущена из неизвестного источника
-		this.local();
+		if (s.includes("192.168")) {			
+			this.local();	
+			return;
+		}
+		
+		this.unknown();
 		
 	},
 	
@@ -2527,14 +2531,24 @@ var user_data={
 	},
 
 	local: function() {	
+	
+		let uid = prompt('Введите ID', 100);
 		
 		this.req_result='ok'		
-		my_data.name="Дядя"+Math.floor(Math.random()*100);
-		my_data.uid="local"+Math.floor(Math.random()*1000);
-		my_data.pic_url="https://www.instagram.com/static/images/homepage/screenshot1.jpg/d6bf0c928b5a.jpg";
+		my_data.name="Local" + uid;
+		my_data.uid="Local" + uid;
+		my_data.pic_url="https://ibb.co/GCW6vg0";
 		state="online";		
 		this.process_results();
 
+	},
+	
+	unknown: function () {
+		
+		//последний случай - запуск из неизвестного окружения
+		user_data.req_result="not ok";
+		this.process_results();
+		
 	},
 	
 	process_results: function() {
