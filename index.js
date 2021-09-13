@@ -1855,6 +1855,7 @@ var shop={
 		let price=skins_powers[this.sel_skin][5];
 		if (price>my_data.money) {
 			big_message.show('Покупка','Подожди-ка, у тебя не достаточно денег чтобы купить этого персонажа', '-------',null);
+			gres.locked.sound.play();
 			return;
 		}
 		
