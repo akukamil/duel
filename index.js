@@ -1851,6 +1851,12 @@ var shop={
 		}
 		
 		
+		if (this.sel_skin===my_data.skin_id) {
+			big_message.show('Покупка','Вы уже приобрели данного персонажа', '-------',null);
+			gres.locked.sound.play();
+			return;
+		}		
+		
 		
 		let price=skins_powers[this.sel_skin][5];
 		if (price>my_data.money) {
@@ -1859,11 +1865,7 @@ var shop={
 			return;
 		}
 		
-		if (this.sel_skin===my_data.skin_id) {
-			big_message.show('Покупка','Вы уже приобрели данного персонажа', '-------',null);
-			gres.locked.sound.play();
-			return;
-		}
+
 				
 		gres.upgrade.sound.play();
 				
