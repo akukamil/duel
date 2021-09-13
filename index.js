@@ -2753,7 +2753,7 @@ var touch = {
 			let dy = this.touch_data.y1 - this.touch_data.y0;
 
 			let v0 = Math.sqrt(dx * dx + dy * dy);
-			v0 = Math.max(50, Math.min(v0, 80));
+			v0 = Math.max(50, Math.min(v0, 200));
 
 			this.Q = Math.atan2(dy, dx);
 			this.Q = Math.max(-0.9, Math.min(this.Q, 0.758398));
