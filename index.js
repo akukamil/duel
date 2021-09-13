@@ -1859,7 +1859,7 @@ var shop={
 			return;
 		}
 		
-		if (this.skin_id===my_data.skin_id) {
+		if (this.sel_skin===my_data.skin_id) {
 			big_message.show('Покупка','Вы уже приобрели данного персонажа', '-------',null);
 			gres.locked.sound.play();
 			return;
