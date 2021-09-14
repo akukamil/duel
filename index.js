@@ -886,7 +886,7 @@ var search_opponent = {
 	wait_time:0,	
 	user_date_complete: 0,
 	start_wait_time:0,
-	rating_vs_opponents:[[-99999,1450,0,12],[1450,1500,3,17],[1500,1550,7,21],[1550,1600,11,25],[1650,99999,20,39]],
+	rating_vs_opponents:[[-99999,1500,0,12],[1500,1600,3,17],[1600,1700,7,21],[1700,1800,11,25],[1800,99999,20,39]],
 
 	
     start: function () {
