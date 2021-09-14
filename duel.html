@@ -32,6 +32,7 @@
 	<th>ID</th>
 	<th>FirstName</th>
 	<th>Rating</th>
+	<th>Skin_ID</th>
 	<th>money</th>
 	<th>tm</th>
 	<th>tm</th>
@@ -64,12 +65,12 @@
 	
 		players_table.innerHTML='';
 		var data=snapshot.val();
-		data = Object.keys(data).map((key) => [key, data[key].name,data[key].rating,data[key].tm,data[key].money,new Date(data[key].tm).toLocaleString()]);
+		data = Object.keys(data).map((key) => [key, data[key].name,data[key].rating,data[key].skin_id,data[key].tm,data[key].money,new Date(data[key].tm).toLocaleString()]);
 		data = data.filter(function (e) {
-		  return e[3]!==undefined;
+		  return e[4]!==undefined;
 		});
 		
-		data.sort(function(a, b){return a[3] - b[3]});
+		data.sort(function(a, b){return a[4] - b[4]});
 	
 
 		data.forEach(p=>{
@@ -81,6 +82,7 @@
 			newRow.insertCell(3).appendChild(document.createTextNode(p[3]));
 			newRow.insertCell(4).appendChild(document.createTextNode(p[4]));
 			newRow.insertCell(5).appendChild(document.createTextNode(p[5]));
+			newRow.insertCell(6).appendChild(document.createTextNode(p[6]));
 
 	
 		})
