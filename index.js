@@ -2081,6 +2081,7 @@ var game = {
 	sec_check:0,
 	h_data:[0,0],
 	cur_round: 0,
+	show_instruction: 0,	
 	block_start_time: 0,	
     process: function () {},
 
@@ -2112,6 +2113,13 @@ var game = {
 			
 		//добаляем кнопки 
 		power_buttons.init();
+		
+		//если нужно показать инструкцию то включаем видимость
+		if (my_data.rating===1400 && 	my_data.skin_id===0 && my_data.money===0) {
+			this.show_instruction=1;
+			objects.hand_click_0.visible=true;			
+		}
+
 						
 		//включаем табло оппонента
 		objects.player_card_cont.visible = true;
@@ -2173,6 +2181,23 @@ var game = {
 			objects.power_slider.scale.x=Math.min(objects.power_slider.scale.x,1);
 		}
 				
+		
+		if (this.show_instruction===1) {
+			
+			if (game_tick>this.p_time+2.5) {
+				objects.hand_click_0.visible=false;
+				this.show_instruction=0;
+			}
+				
+			
+			objects.hand_click_0.y-=2;
+			objects.hand_click_0.x+=4;
+			
+			if (objects.hand_click_0.x>500) {
+				objects.hand_click_0.x=objects.hand_click_0.sx;
+				objects.hand_click_0.y=objects.hand_click_0.sy;
+			}
+		}		
 		
 		//таймер перестановки
 		if (game_tick>this.p_time+10) {		
@@ -3086,8 +3111,8 @@ function load_resources() {
     game_res = new PIXI.Loader();
 	
 	
-	let git_src="https://akukamil.github.io/duel/"
-	//let git_src=""
+	//let git_src="https://akukamil.github.io/duel/"
+	let git_src=""
 	
 	
 	game_res.add('receive_move',git_src+'sounds/receive_move.mp3');
