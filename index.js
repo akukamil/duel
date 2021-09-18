@@ -1742,7 +1742,7 @@ var main_menu = {
 		}
 		
 		if (game_platform==='VK_WEB' || game_platform==='VK_MINIAPP')
-			vkBridge.send('VKWebAppShowWallPostBox', {"message": `Мой рейтинг в игре Стикмэны-Дуэль ${my_data.rating}. А сколько наберешь ты?`});
+			vkBridge.send('VKWebAppShowWallPostBox', {"message": `Мой рейтинг в игре Стикмэны-Дуэль ${my_data.rating}. А сколько наберешь ты?`,"attachments": "https://vk.com/app7919675_39099558"});
 	}
 	
 }
