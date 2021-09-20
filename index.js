@@ -2581,8 +2581,11 @@ var user_data={
 		}		
 				
 		//если с аватаркой какие-то проблемы то ставим дефолтную
-		if (my_data.pic_url===undefined || my_data.pic_url=="")
-			my_data.pic_url	= "https://i.ibb.co/LN0NqZq/ava.jpg";
+		if (my_data.pic_url===undefined || my_data.pic_url=="" || my_data.pic_url==="https://i.ibb.co/LN0NqZq/ava.jpg") {
+			let rid=irnd(10,10000);
+			my_data.pic_url	= 'https://avatars.dicebear.com/v2/male/'+rid+'.svg';
+		}
+			
 		
 		//загружаем мою аватарку на табло хотя его пока не видно
 		let loader2 = new PIXI.Loader();
@@ -3206,4 +3209,3 @@ function main_loop() {
     requestAnimationFrame(main_loop);
     game_tick += 0.01666666;
 }
-
