@@ -2319,7 +2319,7 @@ var stop_my_movements = function () {
 function vis_change() {
 	
 	if (document.hidden===true) {
-		//game.process_finish_game(1,0);
+		objects.player.life_level=-9;
 	}	
 }
 
