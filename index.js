@@ -2613,6 +2613,7 @@ var user_data={
 				my_data.rating = data.rating || 1400;
 				my_data.money=data.money || 0;
 				my_data.skin_id=data.skin_id || 0;
+				my_data.pic_url=data.pic_url;
 			}			
 
 		}).catch((error) => {	
