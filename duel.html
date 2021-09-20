@@ -57,10 +57,43 @@
 	firebase.initializeApp(firebaseConfig);
 	firebase.analytics();
 	
-	//загружаем таблицу с данными всех игроков
-	let row_cnt=1;
+	
+	
+	
+	
+
+
 	let cur_ts=Date.now();
 	
+	//загружаем для анализа и удаляем ненужное
+	firebase.database().ref("players").once('value',(snapshot) => {
+	
+		var data=snapshot.val();
+		data = Object.keys(data).map((key) => [key, data[key].rating,data[key].fp,data[key].tm,data[key].money]);
+		let total_removed=0;
+		data.forEach(p=>{
+		
+			if (p[2]===0) {			
+				let  days_without_visit=(cur_ts-p[3])/86400000;
+				let days_without_allowed=10+15*(Math.max(Math.min(p[2],1800),1400)-1400)/400;
+				if (days_without_visit>days_without_allowed) {
+					firebase.database().ref("players/"+p[0]).remove();
+					total_removed++;
+				}		
+			}
+
+	
+		})
+		
+		alert("Total removed: "+total_removed);
+
+	})
+	
+	
+	
+	
+	//загружаем таблицу с данными всех игроков	
+	let row_cnt=1;	
 	firebase.database().ref("players").orderByChild('tm').limitToLast(10).on('value',(snapshot) => {
 	
 		players_table.innerHTML='';
