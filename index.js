@@ -2667,7 +2667,7 @@ var user_data={
 			//загружаем мою аватарку на табло хотя его пока не видно
 			let loader2 = new PIXI.Loader();
 			loader2.add('my_avatar', my_data.pic_url,{loadType: PIXI.loaders.Resource.LOAD_TYPE.IMAGE});
-			loader2.load((loader, resources) => {objects.player_avatar.texture = resources.my_avatar.texture;});
+			loader2.load((loader, resources) => {objects.popup_avatar.texture=objects.player_avatar.texture = resources.my_avatar.texture;});
 						
 						
 					
@@ -2675,7 +2675,6 @@ var user_data={
 			firebase.database().ref("players/"+my_data.uid).set({name:my_data.name, rating: my_data.rating,money: my_data.money, skin_id: my_data.skin_id, pic_url: my_data.pic_url, fp:0, tm:firebase.database.ServerValue.TIMESTAMP});
 								
 			//устанавливаем данные в попап
-			objects.popup_avatar.texture=objects.player_avatar.texture
 			objects.popup_rating_text.text=objects.player_rating_text.text;	
 			objects.popup_name_text.text=objects.player_name_text.text;	
 			
