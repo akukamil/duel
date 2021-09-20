@@ -2580,17 +2580,7 @@ var user_data={
 			}
 		}		
 				
-		//если с аватаркой какие-то проблемы то ставим дефолтную
-		if (my_data.pic_url===undefined || my_data.pic_url=="" || my_data.pic_url==="https://i.ibb.co/LN0NqZq/ava.jpg") {
-			let rid=irnd(10,10000);
-			my_data.pic_url	= 'https://avatars.dicebear.com/v2/male/'+rid+'.svg';
-		}
-			
-		
-		//загружаем мою аватарку на табло хотя его пока не видно
-		let loader2 = new PIXI.Loader();
-		loader2.add('my_avatar', my_data.pic_url,{loadType: PIXI.loaders.Resource.LOAD_TYPE.IMAGE});
-		loader2.load((loader, resources) => {objects.player_avatar.texture = resources.my_avatar.texture;});				
+				
 					
 					
 		//показываем кнопки вконтакте если мы в этой соц. сети
@@ -2665,6 +2655,21 @@ var user_data={
 
 			//это событие когда меняется видимость приложения
 			document.addEventListener("visibilitychange", vis_change);
+					
+					
+			//если с аватаркой какие-то проблемы то ставим дефолтную
+			if (my_data.pic_url===undefined || my_data.pic_url=="" || my_data.pic_url==="https://i.ibb.co/LN0NqZq/ava.jpg") {
+				let rid=irnd(10,10000);
+				my_data.pic_url	= 'https://avatars.dicebear.com/v2/male/'+rid+'.svg';
+			}
+				
+			
+			//загружаем мою аватарку на табло хотя его пока не видно
+			let loader2 = new PIXI.Loader();
+			loader2.add('my_avatar', my_data.pic_url,{loadType: PIXI.loaders.Resource.LOAD_TYPE.IMAGE});
+			loader2.load((loader, resources) => {objects.player_avatar.texture = resources.my_avatar.texture;});
+						
+						
 					
 			//обновляем данные в файербейс
 			firebase.database().ref("players/"+my_data.uid).set({name:my_data.name, rating: my_data.rating,money: my_data.money, skin_id: my_data.skin_id, pic_url: my_data.pic_url, fp:0, tm:firebase.database.ServerValue.TIMESTAMP});
