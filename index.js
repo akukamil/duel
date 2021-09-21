@@ -2290,7 +2290,7 @@ var game = {
 		}
 		
 		//выходим из игры
-		if (game_tick>this.p_time+2)
+		if (game_tick>this.p_time+4)
 			this.close();
 		
 	},
