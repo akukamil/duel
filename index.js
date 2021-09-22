@@ -2260,14 +2260,21 @@ var game = {
 			firebase.database().ref("players/" + opp_data.uid+"/rating").set(opp_data.rating);	
 		
 			if (res===-1) {
-				big_message.show('Результат','Поражение',`Рейтинг: ${my_old_rating} > ${my_data.rating}`,function(){show_ad()});				
+				big_message.show('Результат','Поражение',`Рейтинг: ${my_old_rating} > ${my_data.rating}`,function(){
+					show_ad();
+					setTimeout(function(){game.close()}, 3000);
+				});				
 				gres.lose.sound.play();
+				
 			}
 				
 			if (res===1) {
 				my_data.money+=1;
-				big_message.show('Результат','Победа',`Рейтинг: ${my_old_rating} > ${my_data.rating}\nДеньги: +1$`,function(){show_ad()});		
-				gres.win.sound.play();		
+				big_message.show('Результат','Победа',`Рейтинг: ${my_old_rating} > ${my_data.rating}\nДеньги: +1$`,function(){
+					show_ad()
+					setTimeout(function(){game.close()}, 3000);
+				});		
+				gres.win.sound.play();						
 				
 				//записываем новый баланс в базу данных
 				firebase.database().ref("players/"+my_data.uid+"/money").set(my_data.money);
@@ -2288,11 +2295,7 @@ var game = {
 			
 			g_process = function(){game.process_finish_game(0)};	
 		}
-		
-		//выходим из игры
-		if (game_tick>this.p_time+4)
-			this.close();
-		
+	
 	},
 		
 	add_headshot: function(t) {
