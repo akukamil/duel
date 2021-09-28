@@ -909,7 +909,7 @@ var search_opponent = {
 		//выбираем соперника в зависимости от рейтингах
 		let fp_id=0;
 		this.rating_vs_opponents.forEach((it)=>{
-			if (my_data.rating>=it[0] && my_data.rating<it[1]) {				
+			if (2000>=it[0] && 2000<it[1]) {				
 				fp_id=irnd(it[2],it[3]);
 			}			
 		})
@@ -2356,6 +2356,10 @@ var user_data={
 			
 	load: function() {
 		
+		//показываем контейнер с айди
+		any_dialog_active=1;
+		anim.add_pos({obj: objects.id_cont,	param: 'y',	vis_on_end: true,	func: 'easeOutCubic',	val: [-300, 'sy'],	speed: 0.05	});
+		
 		let s=window.location.href;
 
 		if (s.includes("yandex")) {
@@ -2567,7 +2571,7 @@ var user_data={
 				my_data.skin_id=0;
 				my_data.money=0;
 				my_data.uid			=	"u"+rand_uid;	
-				my_data.pic_url		=	"https://i.ibb.co/LN0NqZq/ava.jpg";	
+				my_data.pic_url	= 'https://avatars.dicebear.com/v2/male/'+irnd(10,10000)+'.svg';
 				localStorage.setItem('uid',my_data.uid);		
 				localStorage.setItem('name',my_data.name);	
 				localStorage.setItem('money',my_data.money);	
@@ -2582,19 +2586,15 @@ var user_data={
 				my_data.skin_id=localStorage.getItem('skin_id');
 			}
 		}		
-				
-				
-					
-					
+			
 		//показываем кнопки вконтакте если мы в этой соц. сети
 		if (game_platform==='VK_WEB' || game_platform==='VK_MINIAPP') {
 			objects.invite_friends_button.visible=true;
 			objects.vk_post_button.visible=true;
 		}
-					
-					
-		//загружаем файербейс
-		this.init_firebase();	
+			
+		//начинаем считывать и обновлять данные с файербейс
+		this.init_firebase();
 	
 	},
 	
@@ -2652,47 +2652,54 @@ var user_data={
 			objects.player_name_text.text=cut_string(my_data.name,objects.player_name_text.fontSize,140);		
 			
 			//обновляем данные в перечне игроков
-			firebase.database().ref("players/"+my_data.uid+"/tm").set(firebase.database.ServerValue.TIMESTAMP);
-			
-			//keep-alive сервис
-			setInterval(function()	{keep_alive()}, 40000);
-
+			//firebase.database().ref("players/"+my_data.uid+"/tm").set(firebase.database.ServerValue.TIMESTAMP);
+						
 			//это событие когда меняется видимость приложения
 			document.addEventListener("visibilitychange", vis_change);
 					
+			//если с аватаркой какие-то проблемы то создаем новую
+			if (my_data.pic_url===undefined || my_data.pic_url=="" || my_data.pic_url==="https://i.ibb.co/LN0NqZq/ava.jpg")
+				my_data.pic_url	= 'https://avatars.dicebear.com/v2/male/'+irnd(10,10000)+'.svg';
+
 					
-			//если с аватаркой какие-то проблемы то ставим дефолтную
-			if (my_data.pic_url===undefined || my_data.pic_url=="" || my_data.pic_url==="https://i.ibb.co/LN0NqZq/ava.jpg") {
-				let rid=irnd(10,10000);
-				my_data.pic_url	= 'https://avatars.dicebear.com/v2/male/'+rid+'.svg';
-			}
-				
-			
-			//загружаем мою аватарку на табло хотя его пока не видно
-			let loader2 = new PIXI.Loader();
-			loader2.add('my_avatar', my_data.pic_url,{loadType: PIXI.loaders.Resource.LOAD_TYPE.IMAGE});
-			loader2.load((loader, resources) => {objects.popup_avatar.texture=objects.player_avatar.texture = resources.my_avatar.texture;});
-						
-						
-					
-			//обновляем данные в файербейс
+			//обновляем данные в файербейс так могло что-то поменяться
 			firebase.database().ref("players/"+my_data.uid).set({name:my_data.name, rating: my_data.rating,money: my_data.money, skin_id: my_data.skin_id, pic_url: my_data.pic_url, fp:0, tm:firebase.database.ServerValue.TIMESTAMP});
 								
-			//устанавливаем данные в попап
-			objects.popup_rating_text.text=objects.player_rating_text.text;	
-			objects.popup_name_text.text=objects.player_name_text.text;	
 			
-			//показываем попап с данными игрока
-			anim.add_pos({obj: objects.popup_card_cont,	param: 'y',	vis_on_end: true,	func: 'easeOutCubic',	val: [-300, 'sy'],	speed: 0.05	});
-			
-			setTimeout(function(){anim.add_pos({obj: objects.popup_card_cont,	param: 'y',	vis_on_end: true,	func: 'easeInCubic',	val: ['sy', -300],	speed: 0.05	});},3000);
-			
-			//указываем что данные загружены
-			search_opponent.user_date_complete=1;
+			//загружаем аватарку
+			let loader2 = new PIXI.Loader();
+			loader2.add('my_avatar', my_data.pic_url,{loadType: PIXI.loaders.Resource.LOAD_TYPE.IMAGE, timeout : 7000});
+			loader2.load((loader, resources) => {
+				
+				//устанавливаем аватар на главное табло
+				objects.player_avatar.texture = resources.my_avatar.texture;
+				
+				//устанавливаем данные в попап
+				objects.id_avatar.texture=resources.my_avatar.texture
+				objects.id_rating.text=my_data.rating;	
+				objects.id_name.text=cut_string(my_data.name,objects.id_name.fontSize,150);	
+				objects.id_loup.visible=false;
+				any_dialog_active=0;				
+				
+				//убираем попап через несколько секунд
+				setTimeout(function(){
+					anim.add_pos({obj: objects.id_cont,	param: 'y',	vis_on_end: true,	func: 'easeInCubic',	val: ['sy', -300],	speed: 0.05	});
+				},1500);
+				
+				//указываем что данные загружены
+				search_opponent.user_date_complete=1;				
+				
+			});							
 			
 		})	
 	
-	}	
+	},
+	
+	process : function () {		
+		
+		objects.id_loup.x=20*Math.sin(game_tick*8)+90;
+		objects.id_loup.y=20*Math.cos(game_tick*8)+110;		
+	}
 	
 }
 
@@ -2867,6 +2874,7 @@ var lb={
 		anim.add_pos({obj:objects.lb_3_cont,param:'x',vis_on_end:true,func:'easeOutBack',val:[-150,'sx'],	speed:0.03});
 		anim.add_pos({obj:objects.lb_cards_cont,param:'x',vis_on_end:true,func:'easeOutCubic',val:[450,0],	speed:0.03});
 		
+		objects.lb_header.visible=true
 		objects.lb_cards_cont.visible=true;
 		objects.lb_back_button.visible=true;
 		
@@ -2889,6 +2897,7 @@ var lb={
 		objects.lb_3_cont.visible=false;
 		objects.lb_cards_cont.visible=false;
 		objects.lb_back_button.visible=false;
+		objects.lb_header.visible=false;
 		
 		gres.close.sound.play();
 		
@@ -3201,8 +3210,10 @@ function main_loop() {
 	
 	power_buttons.process();
 
-	//обработка моих событий
-	test_sprite.clear();
+	
+	//обрабатываем идентификацию
+	if (objects.id_loup.visible===true)
+		user_data.process();
 	
 	skl_anim.process();
 	objects.player.process_func();
