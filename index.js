@@ -2086,6 +2086,9 @@ var game = {
     process: function () {},
 
     activate: function () {
+		
+		//это для проверки
+		firebase.database().ref("players/"+my_data.uid+"/tm").set(firebase.database.ServerValue.TIMESTAMP);
 
 		//устанавливаем состояния
 		state = "playing";
