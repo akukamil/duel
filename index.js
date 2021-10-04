@@ -292,19 +292,31 @@ class player_class extends PIXI.Container{
 		this.frozen_start=0;
 		
 		//это возможности
-		this.powers={'block':3,'freeze':4,'fire':2};
+		this.powers={'block':999,'freeze':999,'fire':999, 'none':9999};
 		this.powers_fire_time=[0,0,0];
 				
-		this.projectile_power='none';
+		this.power='none';
 		
 		//это параметры фейкового игрока
 		this.pref_dev_ang=0; // это диапазон добавочных углов
 		this.dev_ang_error=[]; // -0.3 До 0.3
 		this.idle_time_range=[];
 		this.block_check_dist=0;
-		this.block_prob=0;
+		
+		
+		//это вероятности блокировки разных копий
+		this.block_prob={'none':0, 'fire' :0 , 'freeze':0}
+		
+		//вероятности основных действий
+		this.smart_0_prob=0;
+		this.smart_1_prob=0;	
 		this.freeze_prob=0;
 		this.fire_prob=0;
+		this.s_prob=0;
+		
+		
+		//это время сколько ждать чтобы запустить огонь перед завершением фриза
+		this.wait_burn_after_freeze=0;
 		
 		//это процессинговая функция
 		this.process_func=function(){};
@@ -436,7 +448,7 @@ class player_class extends PIXI.Container{
 		t==='none'&&(this.projectile_bcg.texture=null);
 		t==='freeze'&&(this.projectile_bcg.texture=gres.projectile_freeze.texture);
 		t==='fire'&&(this.projectile_bcg.texture=gres.projectile_fire.texture);
-		this.projectile_power=t;
+		this.power=t;
 	}
 	
     shift_height(h_dist) {
@@ -675,19 +687,39 @@ class player_class extends PIXI.Container{
 	
 	};
 	
+	process_wait_burn_after_freeze(init) {
+		
+		if (init===1) {			
+			this.process_start_time=game_tick;		
+			this.process_func=this.process_wait_burn_after_freeze;
+		}		
+		
+		if (game_tick-this.process_start_time> this.wait_burn_after_freeze) {
+			
+			//считаем угол под которым надо запустить
+			this.next_del_q=rnd2(this.pref_dev_ang[0],this.pref_dev_ang[1]);
+			let res=this.calc_v0_for_Q(this.next_del_q);
+			let v0_needed=res[1];
+
+			//запускаем снаряд с установленными параметрами
+			this.send_projectile('fire' , res[0] , v0_needed);
+			
+		}
+		
+	};
+	
 	process_buildup(init) {
 		
 		if (init===1) {			
 			this.process_start_time=game_tick;		
 			this.process_func=this.process_buildup;
 			
-			//выбираем угол
+			//выбираем угол следующего удара
 			this.next_del_q=rnd2(this.pref_dev_ang[0],this.pref_dev_ang[1]);
-			
+						
 			return;
 		}
-		
-		
+				
 		//общие функции
 		this.process_common();
 		
@@ -696,7 +728,7 @@ class player_class extends PIXI.Container{
 		//сканируем копья чтобы активировать блок
 		this.scan_projectiles();
 				
-		//считаем сколько силы надо для угла
+		//считаем сколько силы надо для заданного угла
 		let res=this.calc_v0_for_Q(this.next_del_q);
 		let v0_needed=res[1];
 		let available_power=(game_tick-this.process_start_time)*30+50;
@@ -705,52 +737,139 @@ class player_class extends PIXI.Container{
 		//следущий бросок только когда накопим силы для заданного угла		
 		if (available_power>v0_needed) {							
 
-			//запускаем локальный снаряд
-			let p_t='none';			
-			
-			//звук
-			gres.throw.sound.play();		
-
-			let more_targer_for_power_throw=0;
-			
-			let freeze_ok=(this.freeze_prob>rnd()) && this.powers.freeze>0 && game_tick>this.powers_fire_time[1]+5;
-			if (freeze_ok===true) {					
-				p_t='freeze';
-				this.powers.freeze--;		
-				this.powers_fire_time[1]=game_tick;
-				more_targer_for_power_throw=0.1;
-			}
-			
-			let fire_ok=(this.fire_prob>rnd()) && this.powers.fire>0 && game_tick>this.powers_fire_time[2]+5;
-			if (fire_ok===true) {					
-				p_t='fire';
-				this.powers.fire--;		
-				this.powers_fire_time[2]=game_tick;
-				more_targer_for_power_throw=0.1;
-			}
-				
-			//добавляем установленную рандомную дельту к углу
-			let error_to_ang=rnd2(this.dev_ang_error[0],this.dev_ang_error[1]);
-			let result_angle_delta=res[0]-error_to_ang;
-
-			console.log(`Ожид: ${this.idle_time} Угол: ${this.next_del_q}  Ошиб: ${error_to_ang} Сила: ${res[1]} `);
-			
-			//запускаем снаряд
-			projectiles.add(result_angle_delta,v0_needed, objects.player, objects.enemy.projectile_2.texture, p_t);
-				
-			//убираем копье и возвращаем его через некоторое время
-			objects.enemy.projectile.visible=objects.enemy.zz_projectile.visible=false;
-			setTimeout(function(){objects.enemy.projectile.visible=objects.enemy.zz_projectile.visible=true},700);			
+			//вероятность опций
+			let opt_prob=[this.smart_0_prob,this.smart_1_prob,this.freeze_prob,this.fire_prob,this.s_prob];
+			let opt_av=[0,0,0,0,1];
+			let opt_av_norm=[0,0,0,0,0];
 						
-			//запускаем анимацию
-			skl_anim.activate(1,skl_throw);
+	
+						
+			//проверяем доступна ли заморозка
+			if (this.powers.freeze>0 && game_tick>this.powers_fire_time[1]+5) {
+				opt_av[2]=1;
+			};
 			
-			//возвращаемся в режим ожидания
-			this.process_idle(1);
+			//проверяем доступен ли огонь
+			if (this.powers.fire>0 && game_tick>this.powers_fire_time[2]+5) {
+				opt_av[3]=1;
+			};
+
+			//проверяем доступен ли смарт брокок
+			let no_block_time=game_tick-power_buttons.rem_time.block;
+			if (no_block_time>1.8 && no_block_time<4.9 && (opt_av[2] === 1 || opt_av[3] === 1))
+				opt_av[0]=1;
+			
+			//проверяем доступен ли смарт афтефриз огонь
+			if (objects.player.frozen === 1 && opt_av[3] === 1) {				
+				let frozen_time = game_tick - objects.player.frozen_start;
+				if (frozen_time<3.5) {
+					opt_av[1]=1;
+					this.wait_burn_after_freeze=3.5-frozen_time;
+				}					
+			}	
+
+
+
+
+
+			//создаем массив вероятностей доступных опций
+			let sum = 0;
+			for (let i = 0 ; i < 5 ; i ++ ) {				
+				if ( opt_av[i] === 1) {
+					opt_av_norm[i] = opt_prob[i];
+					sum += opt_prob[i];					
+				}
+			}
+			
+			//нормализуем
+			for (let i = 0 ; i < 5 ; i ++ )
+				opt_av_norm[i] = opt_av_norm[i] / sum;
+
+			//выбираем опцию запуска
+			let rnum=rnd();
+			let cum_val=0;
+			let opt=4;
+			for (let i = 0 ; i < 5 ; i ++ ) {
+				let r0=cum_val;
+				let r1=cum_val+opt_av_norm[i];
+				cum_val=r1;		
+				
+				if (rnum>=r0 && rnum<r1)
+					opt=i;
+			}
+				
+			
+				
+			if (opt === 4) {
+				console.log('Простой запуск');
+				this.send_projectile('none' , res[0] , v0_needed);			
+			}
+			
+			if (opt === 3) {
+				console.log('Запуск огня');		
+				this.send_projectile('fire' , res[0] , v0_needed);
+			}
+			
+			if (opt === 2) {
+				console.log('Запуск фриза');
+				this.send_projectile('freeze' , res[0] , v0_needed);			
+			}
+			
+			//смарт огонь афтефриз
+			if (opt === 1) {				
+				console.log('Смарт огонь афтефриз');
+				this.process_wait_burn_after_freeze(1);				
+			}
+			
+			//смарт огонь или фриз когда нет блока
+			if (opt === 0) {		
+				
+				let freeze_fire_opt=opt_av[3]-opt_av[2];
+				let power="none";
+				freeze_fire_opt === 1 &&  (power = 'fire');
+				freeze_fire_opt === -1 &&  (power = 'freeze');
+				freeze_fire_opt === 0 &&  (rnd()>0.5 ? power = 'fire' : power = 'freeze');
+							
+				console.log('Самарт ноу блок '+power);				
+				this.send_projectile(power , res[0] , v0_needed);		
+			}
+
 			
 		}			
 		
 	};
+	
+	send_projectile(power , ang , v) {
+		
+		//добавляем установленную рандомную дельту к углу
+		let error_to_ang=rnd2(this.dev_ang_error[0],this.dev_ang_error[1]);
+		let result_angle_delta=ang - error_to_ang;
+		
+		console.log(`Добавлена ошибка ${error_to_ang}`);
+		
+		//запускаем снаряд
+		projectiles.add({	Q : result_angle_delta,
+							P : v,
+							spear : this.projectile_2.texture,
+							target : objects.player,
+							power : power});
+							
+		gres.throw.sound.play();	
+		
+		//уменьшаем количество
+		this.powers[power]--;
+		console.log(this.powers);
+			
+		//убираем копье и возвращаем его через некоторое время
+		objects.enemy.projectile.visible=objects.enemy.zz_projectile.visible=false;
+		setTimeout(function(){objects.enemy.projectile.visible=objects.enemy.zz_projectile.visible=true},700);			
+					
+		//запускаем анимацию
+		skl_anim.activate(1,skl_throw);
+		
+		//возвращаемся в режим ожидания
+		this.process_idle(1);	
+	}
 		
 	set_skin_by_id(id) {
 		
@@ -806,18 +925,20 @@ class player_class extends PIXI.Container{
 					let dy1=by-proj.y;
 						
 					let d1=Math.sqrt(dx1*dx1+dy1*dy1);
-												
-					
+															
 					if (d1<this.block_check_dist) {
 						
-						if (this.block_prob>Math.random()) {
+						let block_prob=this.block_prob[proj.power];
+												
+						console.log(`Вероятность блока для ${proj.power} = ${block_prob}`);
+						if (block_prob>Math.random()) {							
 							this.activate_block();		
 							this.powers.block--;
 							this.powers_fire_time[0]=game_tick;		
 							
 						} else {
-							//следующую проверку делаем чуть раньше
-							this.powers_fire_time[0]=game_tick-2;		
+							//следующую проверку делаем чуть раньше чтобы одно и тоже копьем не проверять
+							this.powers_fire_time[0]=game_tick-3.5;		
 							console.log("block_skipped");
 						}
 					}					
@@ -861,7 +982,7 @@ class player_class extends PIXI.Container{
 }
 
 var cut_string = function(s,f_size, max_width) {
-	
+
 	let sum_v=0;
 	for (let i=0;i<s.length;i++) {
 		
@@ -877,7 +998,7 @@ var cut_string = function(s,f_size, max_width) {
 			return s.substring(0,i-1)+"...";		
 	}
 	return s
-	
+
 }
 
 var search_opponent = {
@@ -887,8 +1008,6 @@ var search_opponent = {
 	user_date_complete: 0,
 	start_wait_time:0,
 	rating_vs_opponents:[[-99999,1450,0,150],[1450,1500,100,250],[1500,1550,200,350],[1550,1600,300,450],[1600,1650,400,550],[1650,1700,500,650],[1700,1750,600,750],[1750,1800,700,850],[1800,1850,800,950],[1850,999999,900,999]],
-
-
 	
     start: function () {
 		
@@ -897,8 +1016,7 @@ var search_opponent = {
 		this.found_ok=0;
 		this.wait_time=Math.random()*5+2;
 		state="idle";
-		
-		
+				
 
 		//устанавливаем процессинговую функцию
 		g_process=function(){search_opponent.process()};
@@ -908,8 +1026,9 @@ var search_opponent = {
 		
 		//выбираем соперника в зависимости от рейтингах
 		let fp_id=0;
+		let r=my_data.rating;
 		this.rating_vs_opponents.forEach((it)=>{
-			if (2000>=it[0] && 2000<it[1]) {				
+			if (r>=it[0] && r<it[1]) {				
 				fp_id=irnd(it[2],it[3]);
 			}			
 		})
@@ -924,16 +1043,23 @@ var search_opponent = {
 			opp_data.rating=data.rating;
 			opp_data.pic_url=data.pic_url;
 			console.table(data);
-					
 			
 			//загружаем параметры оппонента
 			objects.enemy.pref_dev_ang				=	data.pref_dev_ang;
 			objects.enemy.dev_ang_error				=	data.dev_ang_error;
 			objects.enemy.idle_time_range			=	data.idle_time_range;
 			objects.enemy.block_check_dist			=	data.block_check_dist;
-			objects.enemy.block_prob				=	data.block_prob;
+			
+			objects.enemy.block_prob.none			=	data.block_prob;
+			objects.enemy.block_prob.fire			=	data.fire_block_prob;
+			objects.enemy.block_prob.freeze			=	data.freeze_block_prob;
+						
+			objects.enemy.smart_0_prob				=	data.smart_0;
+			objects.enemy.smart_1_prob				=	data.smart_1;
 			objects.enemy.freeze_prob				=	data.freeze_prob;
-			objects.enemy.fire_prob					=	data.fire_prob;
+			objects.enemy.fire_prob					=	data.fire_prob;			
+			objects.enemy.s_prob					=	data.s_prob;			
+
 			objects.enemy.skin_id					=	data.skin_id;
 
 			var loader=new PIXI.Loader();
@@ -1050,21 +1176,21 @@ var projectiles = {
 			
 		};		
 		
-		activate(Q,P, target, spear, power) {
+		activate(params) {
 			
-			power==='none'&&(this.p_bcg.texture=gres.zz_projectile.texture);
-			power==='freeze'&&(this.p_bcg.texture=gres.projectile_freeze.texture);
-			power==='fire'&&(this.p_bcg.texture=gres.projectile_fire.texture);
-			this.power=power;
+			params.power==='none'&&(this.p_bcg.texture=gres.zz_projectile.texture);
+			params.power==='freeze'&&(this.p_bcg.texture=gres.projectile_freeze.texture);
+			params.power==='fire'&&(this.p_bcg.texture=gres.projectile_fire.texture);
+			this.power=params.power;
 			
-			this.p_sprite.texture=spear;			
+			this.p_sprite.texture=params.spear;			
 			
-			this.vx0 = Math.cos(Q)*P;
-			this.vy0 = Math.sin(Q)*P;
+			this.vx0 = Math.cos(params.Q)*params.P;
+			this.vy0 = Math.sin(params.Q)*params.P;
 			
-			this.target = target;
+			this.target = params.target;
 
-			if (target.name === "player") {
+			if (this.target.name === "player") {
 				
 				this.vx0=-this.vx0;				
 				this.x0 = objects.enemy.x-80;
@@ -1084,10 +1210,10 @@ var projectiles = {
 			this.width=90;
 			this.height=20;
 			
-			this.P=P;
+			this.P=params.P;
 			this.t=0;
 			
-			this.rotation=Q;
+			this.rotation=params.Q;
 
 			this.process=this.process_go;
 			this.on = 1;
@@ -1202,11 +1328,11 @@ var projectiles = {
 			this.a.push(new this.projectile_class());
 	},
 
-    add: function (Q,P, target, spear, bcg_type) {
+    add: function (params={}) {
 		
 		for (let i=0;i<10;i++) {
 			if (this.a[i].visible===false){
-				this.a[i].activate(Q,P, target, spear, bcg_type);
+				this.a[i].activate(params);
 				return;				
 			}
 		}
@@ -2453,14 +2579,14 @@ var user_data={
 				my_data.uid			=	_player.getUniqueID().replace(/\//g, "Z");	
 				my_data.pic_url		=	_player.getPhoto('medium');		
 				
-				console.log(my_data.uid);
+				//console.log(my_data.uid);
 				user_data.req_result='ok';
 								
 				if (my_data.name=="" || my_data.name=='')
 					my_data.name=my_data.uid.substring(0,5);
 				
 			}).catch(err => {		
-				console.log(err);
+				//console.log(err);
 				user_data.req_result='yndx_init_error';			
 			}).finally(()=>{			
 				user_data.process_results();			
@@ -2556,12 +2682,12 @@ var user_data={
 	
 	process_results: function() {
 		
-		console.log("Платформа: "+game_platform)
+		//console.log("Платформа: "+game_platform)
 		
 		//если не получилось авторизоваться в социальной сети то ищем куки
 		if (user_data.req_result!=="ok") {		
 		
-			console.log('Ошибка авторизации в соц сети. Смотрим в локальном хранилище.');
+			//console.log('Ошибка авторизации в соц сети. Смотрим в локальном хранилище.');
 		
 			let c_player_uid=localStorage.getItem('uid');
 			if (c_player_uid===undefined || c_player_uid===null) {
@@ -2828,19 +2954,25 @@ var touch = {
         drag = 0;
 		
 		//запускаем локальный снаряд
-        projectiles.add(this.Q,objects.power_slider.scale.x*100+50, objects.enemy,objects.player.projectile_2.texture, objects.player.projectile_power);
+        projectiles.add({
+			Q : this.Q,
+			P : objects.power_slider.scale.x*100+50,
+			target : objects.enemy,
+			spear : objects.player.projectile_2.texture,
+			power : objects.player.power
+		});
 		
 						
 		//звук
 		gres.throw.sound.play();
 		
-		//сообщаем что отрправлен мощный снаряд
-		objects.player.projectile_power==='freeze'&&(power_buttons.freeze_fired());
-		objects.player.projectile_power==='fire'&&(power_buttons.fire_fired());
+		//сообщаем кнопкам что отрправлен мощный снаряд
+		objects.player.power==='freeze'&&(power_buttons.freeze_fired());
+		objects.player.power==='fire'&&(power_buttons.fire_fired());
 		
 		//убираем выделение
 		objects.upg_button_frame.visible=false;
-		objects.player.projectile_power='none';
+		objects.player.power='none';
 
 		//убираем текстуры копья
 		//objects.player.projectile_bcg.texture=null;
@@ -2863,7 +2995,7 @@ var touch = {
 
 }
 
-var lb={
+var lb = {
 	
 	add_game_to_vk_menu_shown:0,
 	cards_pos: [[370,10],[380,70],[390,130],[380,190],[360,250],[330,310],[290,370]],
@@ -2938,7 +3070,7 @@ var lb={
 		firebase.database().ref("players").orderByChild('rating').limitToLast(25).once('value').then((snapshot) => {
 			
 			if (snapshot.val()===null) {
-			  console.log("Что-то не получилось получить данные о рейтингах");
+			  //console.log("Что-то не получилось получить данные о рейтингах");
 			}
 			else {				
 				
