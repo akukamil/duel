@@ -3177,6 +3177,10 @@ function init_game_env() {
 		any_dialog_active = 0;
 		anim.add_pos({obj: objects.id_cont,param: 'y',vis_on_end: false,func: 'easeInBack',val: ['y',-200],	speed: 0.03});
 		
+		
+		//присваиваем айди моего скина
+		objects.player.skin_id=my_data.skin_id;
+		
 		//показываем кнопки вконтакте если мы в этой соц. сети
 		if (game_platform==='VK') {
 			objects.invite_friends_button.visible=true;
