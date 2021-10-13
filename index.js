@@ -2684,7 +2684,7 @@ var auth = function() {
 				//обновляем базовые данные в файербейс так могло что-то поменяться
 				firebase.database().ref("players/"+my_data.uid+"/name").set(my_data.name);
 				firebase.database().ref("players/"+my_data.uid+"/pic_url").set(my_data.pic_url);
-				firebase.database().ref("players/"+my_data.uid+"/tm").set(firebase.database.ServerValue.TIMESTAMP);
+				//firebase.database().ref("players/"+my_data.uid+"/tm").set(firebase.database.ServerValue.TIMESTAMP);
 
 				//вызываем коллбэк
 				resolve("ok");
