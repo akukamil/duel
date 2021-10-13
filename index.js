@@ -2697,17 +2697,17 @@ var auth = function() {
 				resolve("ok");
 			},
 
-			process : function () {
 
-				objects.id_loup.x=20*Math.sin(game_tick*8)+90;
-				objects.id_loup.y=20*Math.cos(game_tick*8)+110;
-			}
 		}
 
 		help_obj.init();
 
 	});	
 	
+
+
+
+
 }
 
 var exp= {
@@ -3294,8 +3294,11 @@ function main_loop() {
 
 	
 	//обрабатываем идентификацию
-	//if (objects.id_loup.visible===true)
-	//	auth.help_obj.process();
+	if (objects.id_loup.visible===true) {
+				objects.id_loup.x=20*Math.sin(game_tick*8)+90;
+		objects.id_loup.y=20*Math.cos(game_tick*8)+110;
+		
+	}
 	
 	skl_anim.process();
 	objects.player.process_func();
