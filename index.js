@@ -2,7 +2,7 @@ var M_WIDTH = 800, M_HEIGHT = 450;
 var app, game_res, gres, objects = {}, my_data = {}, opp_data = {};
 var g_process = () => {};
 
-var any_dialog_active = 0, net_play = 0, game_platform="";
+var any_dialog_active = 1, net_play = 0, game_platform="";
 
 var guide_line = new PIXI.Graphics();
 var drag = 0, game_tick = 0, state = "";
@@ -554,10 +554,9 @@ class player_class extends PIXI.Container{
 	
 	make_frozen() {
 					
-		
 		this.frozen=1;
 		this.frozen_start=game_tick;	
-		
+				
 		if (this.name==='player') {
 			touch.stop();
 			skl_anim.slots[0].on=0;
@@ -801,23 +800,23 @@ class player_class extends PIXI.Container{
 			
 				
 			if (opt === 4) {
-				console.log('Простой запуск');
+				//console.log('Простой запуск');
 				this.send_projectile('none' , res[0] , v0_needed);			
 			}
 			
 			if (opt === 3) {
-				console.log('Запуск огня');		
+				//console.log('Запуск огня');		
 				this.send_projectile('fire' , res[0] , v0_needed);
 			}
 			
 			if (opt === 2) {
-				console.log('Запуск фриза');
+				//console.log('Запуск фриза');
 				this.send_projectile('freeze' , res[0] , v0_needed);			
 			}
 			
 			//смарт огонь афтефриз
 			if (opt === 1) {				
-				console.log('Смарт огонь афтефриз');
+				//console.log('Смарт огонь афтефриз');
 				this.process_wait_burn_after_freeze(1);				
 			}
 			
@@ -830,7 +829,7 @@ class player_class extends PIXI.Container{
 				freeze_fire_opt === -1 &&  (power = 'freeze');
 				freeze_fire_opt === 0 &&  (rnd()>0.5 ? power = 'fire' : power = 'freeze');
 							
-				console.log('Самарт ноу блок '+power);				
+				//console.log('Самарт ноу блок '+power);				
 				this.send_projectile(power , res[0] , v0_needed);		
 			}
 
@@ -930,7 +929,7 @@ class player_class extends PIXI.Container{
 						
 						let block_prob=this.block_prob[proj.power];
 												
-						console.log(`Вероятность блока для ${proj.power} = ${block_prob}`);
+						//console.log(`Вероятность блока для ${proj.power} = ${block_prob}`);
 						if (block_prob>Math.random()) {							
 							this.activate_block();		
 							this.powers.block--;
@@ -939,7 +938,7 @@ class player_class extends PIXI.Container{
 						} else {
 							//следующую проверку делаем чуть раньше чтобы одно и тоже копьем не проверять
 							this.powers_fire_time[0]=game_tick-3.5;		
-							console.log("block_skipped");
+							//console.log("block_skipped");
 						}
 					}					
 				}				
@@ -1001,11 +1000,34 @@ var cut_string = function(s,f_size, max_width) {
 
 }
 
+var make_text = function (obj, text, max_width) {
+
+	let sum_v=0;
+	let f_size=obj.fontSize;
+
+	for (let i=0;i<text.length;i++) {
+
+		let code_id=text.charCodeAt(i);
+		let char_obj=game_res.resources.m2_font.bitmapFont.chars[code_id];
+		if (char_obj===undefined) {
+			char_obj=game_res.resources.m2_font.bitmapFont.chars[83];
+			text = text.substring(0, i) + 'S' + text.substring(i + 1);
+		}
+
+		sum_v+=char_obj.xAdvance*f_size/64;
+		if (sum_v>max_width) {
+			obj.text =  text.substring(0,i-1);
+			return;
+		}
+	}
+
+	obj.text =  text;
+}
+
 var search_opponent = {
 
 	found_ok: 0,
 	wait_time:0,	
-	user_date_complete: 0,
 	start_wait_time:0,
 	rating_vs_opponents:[[-99999,1450,0,150],[1450,1500,100,250],[1500,1550,200,350],[1550,1600,300,450],[1600,1650,400,550],[1650,1700,500,650],[1700,1750,600,750],[1750,1800,700,850],[1800,1850,800,950],[1850,999999,900,999]],
 	
@@ -1033,7 +1055,7 @@ var search_opponent = {
 			}			
 		})
 		
-		console.log(`выбран игрок с айди ${fp_id}`)
+		//console.log(`выбран игрок с айди ${fp_id}`)
 		
 		firebase.database().ref("players/fp_"+fp_id).once('value').then((snapshot) => {		
 						
@@ -1082,7 +1104,7 @@ var search_opponent = {
 		
 		if (game_tick>this.start_wait_time + this.wait_time){
 			
-			if (this.found_ok===1 && this.user_date_complete===1)
+			if (this.found_ok===1)
 				this.found();	
 			
 		}
@@ -1704,12 +1726,6 @@ var anim = {
 
 }
 
-var keep_alive= function() {
-			
-	firebase.database().ref("players/"+my_data.uid+"/tm").set(firebase.database.ServerValue.TIMESTAMP);
-
-}
-
 var main_menu = {
 	
 	tween_spd: 1,
@@ -2213,8 +2229,6 @@ var game = {
 
     activate: function () {
 		
-		//это для проверки
-		firebase.database().ref("players/"+my_data.uid+"/tm").set(firebase.database.ServerValue.TIMESTAMP);
 
 		//устанавливаем состояния
 		state = "playing";
@@ -2417,6 +2431,9 @@ var game = {
 
 			//обновляем рейтинг на табло
 			objects.player_rating_text.text=my_data.rating;	
+			
+			//записываем событие
+			firebase.database().ref("players/"+my_data.uid+"/tm").set(firebase.database.ServerValue.TIMESTAMP);
 
 			//останавливаем процессинг
 			objects.player.stop();
@@ -2455,380 +2472,241 @@ function vis_change() {
 	}	
 }
 
-var user_data={
-		
-	// эта функция вызывается один раз в начале игры
-	req_result: "",
-		
-	loadScript : function(src) {
-	  return new Promise((resolve, reject) => {
-		const script = document.createElement('script')
-		script.type = 'text/javascript'
-		script.onload = resolve
-		script.onerror = reject
-		script.src = src
-		document.head.appendChild(script)
-	  })
-	},
-			
-	vkbridge_events: function(e) {
-
-		if (e.detail.type === 'VKWebAppGetUserInfoResult') {
-			
-			my_data.name=e.detail.data.first_name + ' ' + e.detail.data.last_name;
-			my_data.uid="vk"+e.detail.data.id;
-			my_data.pic_url=e.detail.data.photo_100;
-			user_data.req_result="ok";	
-			user_data.process_results();			
-		}	
-	},
-			
-	load: function() {
-		
-		//показываем контейнер с айди
-		any_dialog_active=1;
-		anim.add_pos({obj: objects.id_cont,	param: 'y',	vis_on_end: true,	func: 'easeOutCubic',	val: [-300, 'sy'],	speed: 0.05	});
-		
-		let s=window.location.href;
-
-		if (s.includes("yandex")) {
-						
-			Promise.all([
-				this.loadScript('https://yandex.ru/games/sdk/v2')
-			]).then(function(){
-				user_data.yandex();	
-			});
-
-			return;
-		}
-				
-		if (s.includes("vk.com") && s.includes("platform=web")) {
-			
-			Promise.all([
-				this.loadScript('https://vk.com/js/api/xd_connection.js?2'),
-				this.loadScript('//ad.mail.ru/static/admanhtml/rbadman-html5.min.js'),
-				this.loadScript('//vk.com/js/api/adman_init.js'),
-				this.loadScript('https://unpkg.com/@vkontakte/vk-bridge/dist/browser.min.js')	
-				
-			]).then(function(){
-				user_data.vk_web()
-			});
-
-			return;
-		}
-		
-		if (s.includes("vk.com") && s.includes("html5_mobile")) {
-			
-			Promise.all([
-				this.loadScript('https://vk.com/js/api/xd_connection.js?2'),
-				this.loadScript('//ad.mail.ru/static/admanhtml/rbadman-html5.min.js'),
-				this.loadScript('//vk.com/js/api/adman_init.js'),
-				this.loadScript('https://unpkg.com/@vkontakte/vk-bridge/dist/browser.min.js')	
-				
-			]).then(function(){
-				user_data.vk_web()
-			});
-					
-			return;
-		}
-		
-		if (s.includes("vk.com") && s.includes("html5_android")) {
-			
-			Promise.all([
-				this.loadScript('https://vk.com/js/api/xd_connection.js?2'),
-				this.loadScript('//ad.mail.ru/static/admanhtml/rbadman-html5.min.js'),
-				this.loadScript('//vk.com/js/api/adman_init.js'),
-				this.loadScript('https://unpkg.com/@vkontakte/vk-bridge/dist/browser.min.js')		
-			]).then(function(){
-				user_data.vk_miniapp();	
-			})	
-			
-			return;
-		}
-
-		if (s.includes("192.168")) {			
-			this.local();	
-			return;
-		}
-		
-		this.unknown();
-		
-	},
+var auth = function() {
 	
-	yandex: function() {
-	
-		game_platform="YANDEX";
-		if(typeof(YaGames)==='undefined')
-		{		
-			user_data.req_result='yndx_sdk_error';
-			user_data.process_results();	
-		}
-		else
-		{
-			//если sdk яндекса найден
-			YaGames.init({}).then(ysdk => {
-				
-				//фиксируем SDK в глобальной переменной
-				window.ysdk=ysdk;
-				
-				
-				return ysdk.getPlayer();
-			}).then((_player)=>{
-				
-				my_data.name 	=	_player.getName();
-				my_data.uid			=	_player.getUniqueID().replace(/\//g, "Z");	
-				my_data.pic_url		=	_player.getPhoto('medium');		
-				
-				//console.log(my_data.uid);
-				user_data.req_result='ok';
-								
-				if (my_data.name=="" || my_data.name=='')
-					my_data.name=my_data.uid.substring(0,5);
-				
-			}).catch(err => {		
-				//console.log(err);
-				user_data.req_result='yndx_init_error';			
-			}).finally(()=>{			
-				user_data.process_results();			
-			})		
-			
-		}				
+	return new Promise((resolve, reject)=>{
 
-	},
-			
-	vk_web: function() {
-		
-		game_platform="VK_WEB";
-		
-		if(typeof(VK)==='undefined')
-		{		
-			user_data.req_result='vk_sdk_error';
-			user_data.process_results();	
-		}
-		else
-		{
-			
-			VK.init(
-			
-				//функция удачной инициализации вконтакте
-				function()
+		let help_obj = {
+
+			loadScript : function(src) {
+			  return new Promise((resolve, reject) => {
+				const script = document.createElement('script')
+				script.type = 'text/javascript'
+				script.onload = resolve
+				script.onerror = reject
+				script.src = src
+				document.head.appendChild(script)
+			  })
+			},
+
+			vkbridge_events: function(e) {
+
+				if (e.detail.type === 'VKWebAppGetUserInfoResult') {
+
+					my_data.name 	= e.detail.data.first_name + ' ' + e.detail.data.last_name;
+					my_data.uid 	= "vk"+e.detail.data.id;
+					my_data.pic_url = e.detail.data.photo_100;
+
+					//console.log(`Получены данные игрока от VB MINIAPP:\nимя:${my_data.name}\nid:${my_data.uid}\npic_url:${my_data.pic_url}`);
+					help_obj.process_results();
+				}
+			},
+
+			init: function() {
+
+				g_process=function() { help_obj.process()};
+
+				let s = window.location.href;
+
+				//-----------ЯНДЕКС------------------------------------
+				if (s.includes("yandex")) {
+					Promise.all([
+						this.loadScript('https://yandex.ru/games/sdk/v2')
+					]).then(function(){
+						help_obj.yandex();
+					});
+					return;
+				}
+
+
+				//-----------ВКОНТАКТЕ------------------------------------
+				if (s.includes("vk.com")) {
+					Promise.all([
+						this.loadScript('https://vk.com/js/api/xd_connection.js?2'),
+						this.loadScript('//ad.mail.ru/static/admanhtml/rbadman-html5.min.js'),
+						this.loadScript('//vk.com/js/api/adman_init.js'),
+						this.loadScript('https://unpkg.com/@vkontakte/vk-bridge/dist/browser.min.js')
+
+					]).then(function(){
+						help_obj.vk()
+					});
+					return;
+				}
+
+
+				//-----------ЛОКАЛЬНЫЙ СЕРВЕР--------------------------------
+				if (s.includes("192.168")) {
+					help_obj.debug();
+					return;
+				}
+
+
+				//-----------НЕИЗВЕСТНОЕ ОКРУЖЕНИЕ---------------------------
+				help_obj.unknown();
+
+			},
+
+			yandex: function() {
+
+				game_platform="YANDEX";
+				if(typeof(YaGames)==='undefined')
 				{
+					help_obj.local();
+				}
+				else
+				{
+					//если sdk яндекса найден
+					YaGames.init({}).then(ysdk => {
 
-					VK.api(
-						"users.get",
-						{access_token: '2c2dcb592c2dcb592c2dcb59a62c55991122c2d2c2dcb594cfd0c5d42f4b700d3e509a5',fields: 'photo_100'},
-						function (data) {
-							if (data.error===undefined) {
+						//фиксируем SDK в глобальной переменной
+						window.ysdk=ysdk;
+
+						//запрашиваем данные игрока
+						return ysdk.getPlayer();
+
+
+					}).then((_player)=>{
+
+						my_data.name 	= _player.getName();
+						my_data.uid 	= _player.getUniqueID().replace(/\//g, "Z");
+						my_data.pic_url = _player.getPhoto('medium');
+
+						//console.log(`Получены данные игрока от яндекса:\nимя:${my_data.name}\nid:${my_data.uid}\npic_url:${my_data.pic_url}`);
+
+						//если личные данные не получены то берем первые несколько букв айди
+						if (my_data.name=="" || my_data.name=='')
+							my_data.name=my_data.uid.substring(0,5);
+
+						help_obj.process_results();
+
+					}).catch((err)=>{
+
+						//загружаем из локального хранилища если нет авторизации в яндексе
+						help_obj.local();
+
+					})
+				}
+			},
+
+			vk: function() {
+
+				game_platform="VK";
+				vkBridge.subscribe((e) => this.vkbridge_events(e));
+				vkBridge.send('VKWebAppInit');
+				vkBridge.send('VKWebAppGetUserInfo');
+
+			},
+
+			debug: function() {
+
+				game_platform = "debug";
+				let uid = prompt('Отладка. Введите ID', 100);
+
+				my_data.name = my_data.uid = "debug" + uid;
+				my_data.pic_url = "https://sun9-73.userapi.com/impf/c622324/v622324558/3cb82/RDsdJ1yXscg.jpg?size=223x339&quality=96&sign=fa6f8247608c200161d482326aa4723c&type=album";
+
+				help_obj.process_results();
+
+			},
+
+			local: function(repeat = 0) {
+
+				game_platform="LOCAL";
+
+				//ищем в локальном хранилище
+				let local_uid = localStorage.getItem('uid');
+
+				//здесь создаем нового игрока в локальном хранилище
+				if (local_uid===undefined || local_uid===null) {
+
+					//console.log("Создаем нового локального пользователя");
+
+					let rnd_names=["Бегемот","Жираф","Зебра","Тигр","Ослик","Мамонт","Волк","Лиса","Мышь","Сова","Слон","Енот","Кролик","Бизон","Пантера"];
+					let rnd_num=Math.floor(Math.random()*rnd_names.length)
+					let rand_uid=Math.floor(Math.random() * 9999999);
+
+					my_data.name 		=	rnd_names[rnd_num]+rand_uid;
+					my_data.rating 		= 	1400;
+					my_data.uid			=	"ls"+rand_uid;
+					my_data.pic_url		=	'https://avatars.dicebear.com/v2/male/'+irnd(10,10000)+'.svg';
+
+					localStorage.setItem('uid',my_data.uid);
+					help_obj.process_results();
+				}
+				else
+				{
+					//console.log(`Нашли айди в ЛХ (${local_uid}). Загружаем остальное из ФБ...`);
+					
+					my_data.uid = local_uid;	
+					
+					//запрашиваем мою информацию из бд или заносим в бд новые данные если игрока нет в бд
+					firebase.database().ref("players/"+my_data.uid).once('value').then((snapshot) => {		
+									
+						var data=snapshot.val();
+						
+						//если на сервере нет таких данных
+						if (data === null) {
+													
+							//если повтоно нету данных то выводим предупреждение
+							if (repeat === 1)
+								alert('Какая-то ошибка');
+							
+							//console.log(`Нашли данные в ЛХ но не нашли в ФБ, повторный локальный запрос...`);	
+
+							
+							//повторно запускаем локальный поиск						
+							localStorage.clear();
+							help_obj.local(1);	
 								
-								my_data.name=data.response[0].first_name+' '+data.response[0].last_name;
-								my_data.uid="vk"+data.response[0].id;
-								my_data.pic_url=data.response[0].photo_100;
-								user_data.req_result="ok";	
-								user_data.process_results();									
-							}	
-							else
-							{
-								user_data.req_result="vk_error";	
-								user_data.process_results();	
-							}
+							
+						} else {						
+							
+							my_data.pic_url = data.pic_url;
+							my_data.name = data.name;
+							help_obj.process_results();
 						}
-					)
-					
-				},	
-				
-				//функция неудачной инициализации вконтакте
-				function()
-				{
-					user_data.req_result='vk_init_error';
-					user_data.process_results();				
-				},
 
-				//версия апи
-				'5.130');		
-			
+					})	
+
+				}
+
+
+			},
+
+			unknown: function () {
+
+				game_platform="unknown";
+				alert("Неизвестная платформа! Кто Вы?")
+
+				//загружаем из локального хранилища
+				help_obj.local();
+			},
+
+			process_results: function() {
+
+
+				//отображаем итоговые данные
+				//console.log(`Итоговые данные:\nПлатформа:${game_platform}\nимя:${my_data.name}\nid:${my_data.uid}\npic_url:${my_data.pic_url}`);
+
+				//обновляем базовые данные в файербейс так могло что-то поменяться
+				firebase.database().ref("players/"+my_data.uid+"/name").set(my_data.name);
+				firebase.database().ref("players/"+my_data.uid+"/pic_url").set(my_data.pic_url);
+				firebase.database().ref("players/"+my_data.uid+"/tm").set(firebase.database.ServerValue.TIMESTAMP);
+
+				//вызываем коллбэк
+				resolve("ok");
+			},
+
+			process : function () {
+
+				objects.id_loup.x=20*Math.sin(game_tick*8)+90;
+				objects.id_loup.y=20*Math.cos(game_tick*8)+110;
+			}
 		}
 
-	},
-	
-	vk_miniapp: function() {
-		
-		game_platform="VK_MINIAPP";
-		vkBridge.subscribe((e) => this.vkbridge_events(e)); 
-		vkBridge.send('VKWebAppInit');	
-		vkBridge.send('VKWebAppGetUserInfo');	
-		
-	},
+		help_obj.init();
 
-	local: function() {	
-	
-		let uid = prompt('Локальная обстановка. Введите ID', 100);
-		
-		this.req_result='ok'		
-		my_data.name="Local" + uid;
-		my_data.uid="Local" + uid;
-		my_data.pic_url="https://ibb.co/GCW6vg0";
-		state="online";		
-		this.process_results();
-
-	},
-	
-	unknown: function () {
-		
-		//последний случай - запуск из неизвестного окружения
-		user_data.req_result="not ok";
-		this.process_results();
-		
-	},
-	
-	process_results: function() {
-		
-		//console.log("Платформа: "+game_platform)
-		
-		//если не получилось авторизоваться в социальной сети то ищем куки
-		if (user_data.req_result!=="ok") {		
-		
-			//console.log('Ошибка авторизации в соц сети. Смотрим в локальном хранилище.');
-		
-			let c_player_uid=localStorage.getItem('uid');
-			if (c_player_uid===undefined || c_player_uid===null) {
-				
-				let rnd_names=["Бегемот","Жираф","Зебра","Тигр","Ослик","Мамонт","Слон","Енот","Кролик","Бизон","Пантера"];
-				let rnd_num=Math.floor(Math.random()*rnd_names.length)
-				let rand_uid=Math.floor(Math.random() * 99999);
-				my_data.name 	=	rnd_names[rnd_num]+rand_uid;
-				my_data.rating=1400;
-				my_data.skin_id=0;
-				my_data.money=0;
-				my_data.uid			=	"u"+rand_uid;	
-				my_data.pic_url	= 'https://avatars.dicebear.com/v2/male/'+irnd(10,10000)+'.svg';
-				localStorage.setItem('uid',my_data.uid);		
-				localStorage.setItem('name',my_data.name);	
-				localStorage.setItem('money',my_data.money);	
-				localStorage.setItem('pic_url',my_data.pic_url);	
-				localStorage.setItem('skin_id',my_data.skin_id);	
-			
-			} else {				
-				my_data.uid=localStorage.getItem('uid');
-				my_data.name=localStorage.getItem('name');
-				my_data.pic_url=localStorage.getItem('pic_url');
-				my_data.money=localStorage.getItem('money');
-				my_data.skin_id=localStorage.getItem('skin_id');
-			}
-		}		
-			
-		//показываем кнопки вконтакте если мы в этой соц. сети
-		if (game_platform==='VK_WEB' || game_platform==='VK_MINIAPP') {
-			objects.invite_friends_button.visible=true;
-			objects.vk_post_button.visible=true;
-		}
-			
-		//начинаем считывать и обновлять данные с файербейс
-		this.init_firebase();
-	
-	},
-	
-	init_firebase: function() {
-		
-		
-		//запрашиваем мою информацию из бд или заносим в бд новые данные если игрока нет в бд
-		firebase.database().ref("players/"+my_data.uid).once('value').then((snapshot) => {		
-						
-			var data=snapshot.val();
-			if (data===null) {
-				//если я первый раз в  игре
-				my_data.rating=1400;	
-				my_data.money=0;
-				my_data.skin_id=0;
-			}
-			else {
-				//если база данных вернула данные то все равно проверяем корректность ответа
-				my_data.rating = data.rating || 1400;
-				my_data.money=data.money || 0;
-				my_data.skin_id=data.skin_id || 0;
-				my_data.pic_url=data.pic_url;
-			}			
-
-		}).catch((error) => {	
-			firebase.database().ref("errors/"+my_data.uid).set(error);
-		}).finally(()=>{
-			
-			
-			//сделаем сдесь защиту от неопределенности
-			if (my_data.rating===undefined || my_data.name===undefined) {
-				
-				let keep_id=my_data.uid;
-				if (my_data.rating===undefined)
-					my_data.uid="re_"+keep_id;
-				
-				if (my_data.name===undefined)
-					my_data.name="ne_"+keep_id;
-				
-				if (my_data.rating===undefined && my_data.first_name===undefined)
-					my_data.uid="nre_"+keep_id;
-				
-				my_data.rating=1400;
-				my_data.money=0;
-				my_data.skin_id=0;
-				my_data.name=my_data.name || "Игрок";
-	
-			}
-			
-			//присваиваем айди моего скина
-			objects.player.skin_id=my_data.skin_id;
-
-			//обновляем рейтинг и имя в моей карточке
-			objects.player_rating_text.text=my_data.rating;	
-			objects.player_name_text.text=cut_string(my_data.name,objects.player_name_text.fontSize,140);		
-			
-			//обновляем данные в перечне игроков
-			//firebase.database().ref("players/"+my_data.uid+"/tm").set(firebase.database.ServerValue.TIMESTAMP);
-						
-			//это событие когда меняется видимость приложения
-			document.addEventListener("visibilitychange", vis_change);
-					
-			//если с аватаркой какие-то проблемы то создаем новую
-			if (my_data.pic_url===undefined || my_data.pic_url=="" || my_data.pic_url==="https://i.ibb.co/LN0NqZq/ava.jpg")
-				my_data.pic_url	= 'https://avatars.dicebear.com/v2/male/'+irnd(10,10000)+'.svg';
-
-					
-			//обновляем данные в файербейс так могло что-то поменяться
-			firebase.database().ref("players/"+my_data.uid).set({name:my_data.name, rating: my_data.rating,money: my_data.money, skin_id: my_data.skin_id, pic_url: my_data.pic_url, fp:0, tm:firebase.database.ServerValue.TIMESTAMP});
-								
-			
-			//загружаем аватарку
-			let loader2 = new PIXI.Loader();
-			loader2.add('my_avatar', my_data.pic_url,{loadType: PIXI.loaders.Resource.LOAD_TYPE.IMAGE, timeout : 7000});
-			loader2.load((loader, resources) => {
-				
-				//устанавливаем аватар на главное табло
-				objects.player_avatar.texture = resources.my_avatar.texture;
-				
-				//устанавливаем данные в попап
-				objects.id_avatar.texture=resources.my_avatar.texture
-				objects.id_rating.text=my_data.rating;	
-				objects.id_name.text=cut_string(my_data.name,objects.id_name.fontSize,150);	
-				objects.id_loup.visible=false;
-				any_dialog_active=0;				
-				
-				//убираем попап через несколько секунд
-				setTimeout(function(){
-					anim.add_pos({obj: objects.id_cont,	param: 'y',	vis_on_end: true,	func: 'easeInCubic',	val: ['sy', -300],	speed: 0.05	});
-				},1500);
-				
-				//указываем что данные загружены
-				search_opponent.user_date_complete=1;				
-				
-			});							
-			
-		})	
-	
-	},
-	
-	process : function () {		
-		
-		objects.id_loup.x=20*Math.sin(game_tick*8)+90;
-		objects.id_loup.y=20*Math.cos(game_tick*8)+110;		
-	}
+	});	
 	
 }
 
@@ -3242,8 +3120,77 @@ function init_game_env() {
     //загружаем частицы крови
     particle_engine.load();
 
-	//загружаем данные
-    user_data.load();
+
+
+
+	//загружаем данные об игроке
+    auth().then((val)=> {
+
+		//загружаем аватарку игрока
+		return new Promise(function(resolve, reject) {
+			let loader=new PIXI.Loader();
+			loader.add("my_avatar", my_data.pic_url,{loadType: PIXI.loaders.Resource.LOAD_TYPE.IMAGE, timeout: 5000});
+			loader.load(function(l,r) {	resolve(l)});
+		});
+
+	}).then((l)=> {
+
+		//устанавливаем фотки в попап и другие карточки
+		objects.id_avatar.texture=objects.player_avatar.texture=l.resources.my_avatar.texture;
+
+		//устанавлием аватарки
+		make_text(objects.id_name,my_data.name,150);
+		make_text(objects.player_name_text,my_data.name,150);
+
+		//загружаем остальные данные данные игрока (в данном случае - рейтинг, деньги, скин)
+		return firebase.database().ref("players/"+my_data.uid).once('value');
+
+	}).then((snapshot)=>{
+
+		let data=snapshot.val();
+		
+		//проверяем нового игрока
+		if (data === null) {
+			
+			my_data.rating=1400;	
+			my_data.money=0;
+			my_data.skin_id=0;	
+			
+		} else {
+			
+			//если база данных вернула данные то все равно проверяем корректность ответа
+			my_data.rating = data.rating || 1400;
+			my_data.money=data.money || 0;
+			my_data.skin_id=data.skin_id || 0;
+			my_data.pic_url=data.pic_url;			
+		}
+
+
+
+		//устанавливаем рейтинг в попап
+		objects.id_rating.text=objects.player_rating_text.text=my_data.rating;
+
+		//убираем лупу
+		objects.id_loup.visible=false;
+
+
+		//это событие когда меняется видимость приложения
+		document.addEventListener("visibilitychange", vis_change);
+
+
+		activity_on=0;
+
+		return new Promise((resolve, reject) => {setTimeout(resolve, 1000);});
+
+	}).then(()=>{
+		
+		any_dialog_active = 0;
+		anim.add_pos({obj: objects.id_cont,param: 'y',vis_on_end: false,func: 'easeInBack',val: ['y',-200],	speed: 0.03});
+
+	}).catch((err)=>{
+		alert(err);
+	});
+
 
     //подключаем события нажатия на поле
     objects.bcg.pointerdown = touch.down.bind(touch);
@@ -3347,8 +3294,8 @@ function main_loop() {
 
 	
 	//обрабатываем идентификацию
-	if (objects.id_loup.visible===true)
-		user_data.process();
+	//if (objects.id_loup.visible===true)
+	//	auth.help_obj.process();
 	
 	skl_anim.process();
 	objects.player.process_func();
