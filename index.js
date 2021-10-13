@@ -1872,7 +1872,7 @@ var main_menu = {
             return;
 		}
 		
-		if (game_platform==='VK_WEB' || game_platform==='VK_MINIAPP')
+		if (game_platform==='VK')
 			vkBridge.send('VKWebAppShowInviteBox');
 	},
 	
@@ -1883,7 +1883,7 @@ var main_menu = {
             return;
 		}
 		
-		if (game_platform==='VK_WEB' || game_platform==='VK_MINIAPP')
+		if (game_platform==='VK')
 			vkBridge.send('VKWebAppShowWallPostBox', {"message": `Мой рейтинг в игре Стикмэны-Дуэль ${my_data.rating}. А сколько наберешь ты?`,"attachments": "https://vk.com/app7919675_39099558"});
 	}
 	
@@ -2062,14 +2062,7 @@ var	show_ad=function(){
 		})
 	}
 	
-	if (game_platform==="VK_WEB") {
-				 
-		vkBridge.send("VKWebAppShowNativeAds", {ad_format:"interstitial"})
-		.then(data => console.log(data.result))
-		.catch(error => console.log(error));	
-	}		
-			
-	if (game_platform==="VK_MINIAPP") {
+	if (game_platform==="VK") {
 				 
 		vkBridge.send("VKWebAppShowNativeAds", {ad_format:"preloader"})
 		.then(data => console.log(data.result))
@@ -2919,10 +2912,7 @@ var lb = {
 		if (this.add_game_to_vk_menu_shown===1)
 			return;
 		
-		if (game_platform==='VK_WEB')
-			vkBridge.send('VKWebAppAddToFavorites');
-		
-		if (game_platform==='VK_MINIAPP')
+		if (game_platform==='VK')
 			vkBridge.send('VKWebAppAddToFavorites');
 		
 		this.add_game_to_vk_menu_shown=1;
