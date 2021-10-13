@@ -844,7 +844,7 @@ class player_class extends PIXI.Container{
 		let error_to_ang=rnd2(this.dev_ang_error[0],this.dev_ang_error[1]);
 		let result_angle_delta=ang - error_to_ang;
 		
-		console.log(`Добавлена ошибка ${error_to_ang}`);
+		//console.log(`Добавлена ошибка ${error_to_ang}`);
 		
 		//запускаем снаряд
 		projectiles.add({	Q : result_angle_delta,
@@ -857,7 +857,7 @@ class player_class extends PIXI.Container{
 		
 		//уменьшаем количество
 		this.powers[power]--;
-		console.log(this.powers);
+		//console.log(this.powers);
 			
 		//убираем копье и возвращаем его через некоторое время
 		objects.enemy.projectile.visible=objects.enemy.zz_projectile.visible=false;
@@ -1064,7 +1064,7 @@ var search_opponent = {
 			opp_data.uid='fp_'+fp_id;
 			opp_data.rating=data.rating;
 			opp_data.pic_url=data.pic_url;
-			console.table(data);
+			//console.table(data);
 			
 			//загружаем параметры оппонента
 			objects.enemy.pref_dev_ang				=	data.pref_dev_ang;
