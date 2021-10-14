@@ -2604,7 +2604,7 @@ var auth = function() {
 
 			local: function(repeat = 0) {
 
-				game_platform="LOCAL";
+				game_platform="YANDEX";
 
 				//ищем в локальном хранилище
 				let local_uid = localStorage.getItem('uid');
