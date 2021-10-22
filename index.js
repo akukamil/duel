@@ -2064,7 +2064,7 @@ var	show_ad=function(){
 	
 	if (game_platform==="VK") {
 				 
-		vkBridge.send("VKWebAppShowNativeAds", {ad_format:"preloader"})
+		vkBridge.send("VKWebAppShowNativeAds", {ad_format:"interstitial"})
 		.then(data => console.log(data.result))
 		.catch(error => console.log(error));
 	}
@@ -3109,8 +3109,6 @@ function init_game_env() {
 	
     //загружаем частицы крови
     particle_engine.load();
-
-
 
 
 	//загружаем данные об игроке
