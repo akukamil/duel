@@ -2397,7 +2397,9 @@ var game = {
 		
 			if (res===-1) {
 				big_message.show('Результат','Поражение',`Рейтинг: ${my_old_rating} > ${my_data.rating}`,function(){
-					show_ad();
+					
+					if (rnd() > 0.7)
+						show_ad();
 					setTimeout(function(){game.close()}, 3000);
 				});				
 				gres.lose.sound.play();
@@ -2407,7 +2409,8 @@ var game = {
 			if (res===1) {
 				my_data.money+=1;
 				big_message.show('Результат','Победа',`Рейтинг: ${my_old_rating} > ${my_data.rating}\nДеньги: +1$`,function(){
-					show_ad()
+					if (rnd() > 0.7)
+						show_ad();
 					setTimeout(function(){game.close()}, 3000);
 				});		
 				gres.win.sound.play();						
