@@ -2398,8 +2398,7 @@ var game = {
 			if (res===-1) {
 				big_message.show('Результат','Поражение',`Рейтинг: ${my_old_rating} > ${my_data.rating}`,function(){
 					
-					if (rnd() > 0.7)
-						show_ad();
+					show_ad();
 					setTimeout(function(){game.close()}, 3000);
 				});				
 				gres.lose.sound.play();
