@@ -10,7 +10,7 @@ var skl_prepare, skl_throw, skl_lose;
 var charge_spd=0.005;
 var test_sprite,fire_sprite;
 
-var skins_powers=[['s0_',3,0,0,2,0,'Stickman'],['gl_',3,1,0,3,10,'Titan'],['ff_',4,2,1,4,20,'Kenshi'],['bs_',4,3,2,5,30,'Parasite'],['sm_',5,3,2,6,40,'Spider-Man'],['ca_',5,4,3,7,50,'Captain America'],['bm_',6,5,4,8,60,'Batman']];
+var skins_powers=[['s0_',3,0,0,2,0,'Stickman'],['gl_',3,1,0,3,10,'Titan'],['ff_',4,2,1,4,20,'Kenshi'],['bs_',4,3,2,5,50,'Parasite'],['sm_',5,3,2,6,100,'Spider-Man'],['ca_',5,4,3,7,300,'Captain America'],['bm_',6,5,4,8,500,'Batman']];
 
 var col_data=[['head','spine',[[-11,-19],[-1,-25],[9,-21],[12,-12],[9,-4],[0,0]]],['spine','spine',[[-1,-3],[0,29]]],['left_leg1','left_leg1',[[-14,-1],[16,-1]]],['left_leg2','left_leg2',[[-13,-3],[14,-3]]],['right_leg1','right_leg1',[[-14,-1],[16,-1]]],['right_leg2','right_leg2',[[13,2],[-13,2]]],['left_arm1','left_arm1',[[14,0],[-13,0]]],['left_arm2','left_arm2',[[-12,-1],[14,-1]]],['right_arm1','right_arm1',[[-15,0],[12,0]]],['right_arm2','right_arm2',[[-14,0],[12,0]]],['stand','stand',[[184,329],[185,17],[194,16],[194,7],[6,7]]]];
 
@@ -1736,8 +1736,9 @@ var main_menu = {
 		anim.add_pos({obj: objects.main_buttons_cont,	param: 'x',	vis_on_end: true,	func: 'easeOutCubic',	val: [800, 'sx'],	speed: 0.02	});
 			
 		objects.start_player.visible=true;
-		objects.start_player.init(0);
-
+		objects.start_player.init();
+		objects.start_player.set_skin_by_id(my_data.skin_id || 0)
+		
 		objects.start_player.life_level_bcg.visible=false;
 		objects.start_player.life_level_frame.visible=false;
 		objects.start_player.life_level_front.visible=false;
@@ -1917,9 +1918,7 @@ var shop={
 		//устанавливаем вид и параметры текущего скина
 		this.sel_skin=objects.start_player.skin_id=objects.player.skin_id;
 		this.next_button_down(0);
-		
-		
-		
+				
 		this.start_time=game_tick;
 		
 		//устанавливаем процессинговую функцию
@@ -1949,18 +1948,21 @@ var shop={
 	
 	next_button_down: function(v) {
 		
-
 		if (any_dialog_active===1) {
 			gres.locked.sound.play();
 			return;		   
 		}
 		
 		gres.click.sound.play();
-
 		
 		this.sel_skin+=v;
 		this.sel_skin>=(skins_powers.length-1)&&(this.sel_skin=skins_powers.length-1);
 		this.sel_skin===-1&&(this.sel_skin=0)
+		
+		if (my_data.bought_skins[this.sel_skin] === 1)
+			objects.buy_button.texture = gres.sel_button.texture;
+		else
+			objects.buy_button.texture = gres.buy_button.texture;
 		
 		objects.shop_player.set_skin_by_id(this.sel_skin);	
 		
@@ -1992,14 +1994,23 @@ var shop={
 			gres.locked.sound.play();
 			return;		   
 		}
-		
-		
+				
 		if (this.sel_skin===my_data.skin_id) {
-			big_message.show('Покупка','Вы уже приобрели данного персонажа', '-------',null);
+			big_message.show('Ошибка','Это ваш текущий персонаж', '-------',null);
 			gres.locked.sound.play();
 			return;
-		}		
+		}				
 		
+		if (my_data.bought_skins[this.sel_skin] === 1) {
+			
+			//присваиваем айди скина
+			my_data.skin_id=this.sel_skin;
+			objects.player.skin_id=my_data.skin_id;
+			firebase.database().ref("players/"+my_data.uid+"/skin_id").set(my_data.skin_id);
+			big_message.show('Выбор','Вы поменяли персонажа', ')))',null);
+			return
+			
+		}		
 		
 		let price=skins_powers[this.sel_skin][5];
 		if (price>my_data.money) {
@@ -2007,21 +2018,24 @@ var shop={
 			gres.locked.sound.play();
 			return;
 		}
-		
-
 				
 		gres.upgrade.sound.play();
+		
+		objects.buy_button.texture = gres.sel_button.texture;
 				
 		anim.add_pos({obj: objects.funny_bcg,	param: 'alpha',	vis_on_end: true,	func: 'linear',	val: [0, 1],	speed: 0.05	});
 		this.new_buy_time=game_tick;		
 		
 		my_data.money-=price;
+		my_data.bought_skins[this.sel_skin] = 1;
 		my_data.skin_id=this.sel_skin;
 		objects.shop_balance_text.text='Баланс: '+my_data.money+'$';
+		
 		
 		//записываем новый баланс в базу данных
 		firebase.database().ref("players/"+my_data.uid+"/money").set(my_data.money);
 		firebase.database().ref("players/"+my_data.uid+"/skin_id").set(my_data.skin_id);
+		firebase.database().ref("players/"+my_data.uid+"/bought_skins").set(my_data.bought_skins);
 		
 		//присваиваем айди скина
 		objects.player.skin_id=my_data.skin_id;
@@ -3152,10 +3166,12 @@ function init_game_env() {
 			my_data.rating = data.rating || 1400;
 			my_data.money=data.money || 0;
 			my_data.skin_id=data.skin_id || 0;
+			my_data.bought_skins = data.bought_skins || [1,0,0,0,0,0,0,0,0,0];
 			my_data.pic_url=data.pic_url;			
 		}
-
-
+		
+		my_data.skin_id=3;	
+		my_data.bought_skins[my_data.skin_id] = 1;
 
 		//устанавливаем рейтинг в попап
 		objects.id_rating.text=objects.player_rating_text.text=my_data.rating;
