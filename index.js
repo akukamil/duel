@@ -3170,7 +3170,6 @@ function init_game_env() {
 			my_data.pic_url=data.pic_url;			
 		}
 		
-		my_data.skin_id=3;	
 		my_data.bought_skins[my_data.skin_id] = 1;
 
 		//устанавливаем рейтинг в попап
